@@ -1,0 +1,385 @@
+---
+title: "Tugas 1"
+date: "26 Agustus 2026"
+output:
+  html_document:
+    toc: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 3
+    theme: cosmo
+    highlight: tango
+    number_sections: true
+    df_print: paged
+---
+<style>
+/* 1. BACKGROUND: Sandstone Beige */
+body {
+  background-color: #F7E9D7 !important; 
+  font-family: "Poppins", sans-serif;
+  color: #333333;
+  padding: 40px;
+}
+
+/* 2. JUDUL UTAMA & NAMA: Aqua Splash (Bold banget) */
+h1, .title, .author-name, .fa, .fas, .no-highlight {
+  color: #4ECDC4 !important; 
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background-color: transparent !important; /* Mencegah warna background/highlight */
+  padding: 0 !important;
+}
+
+/* 3. SUB JUDUL: Coral Pop */
+h2, h3, .section-title {
+  color: #FF6B2B !important; 
+  font-weight: 800;
+  border-bottom: 3px solid #FF9E7C; 
+  margin-top: 30px;
+}
+
+/* 4. SHADING / BOX OUTPUT: Peach Fizz */
+pre, blockquote, .chunk-output {
+  background-color: #FF9E7C !important; 
+  border-radius: 15px;
+  padding: 20px;
+  border: none;
+  box-shadow: 10px 10px 0px rgba(255, 158, 124, 0.4); /* Shading Peach */
+}
+
+/* 5. HAL LAIN (Bold/Highlight): Sunbeam Yellow (Kecuali elemen no-highlight) */
+strong:not(.no-highlight), b:not(.no-highlight), code, mark {
+  background-color: #FFE066 !important; /* Yellow Pop */
+  color: #5d4037 !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Teks di dalam box Peach tetap bersih */
+pre code {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+</style>
+
+`r fontawesome::fa("user", fill = "#3498db")` <span class="no-highlight">**Putri Dwi Suci Sri Mulyaningsih Sitanggang** (M0401241033)</span>
+```{r}
+library("forecast")
+library("graphics")
+library("TTR")
+library("TSA")
+library("rio")
+library(ggplot2)
+```
+
+# Data
+
+```{r}
+data1 <- import("https://raw.githubusercontent.com/shtlynel-png/mpdw/refs/heads/main/pertemuan%201/ispu_anggota_4.csv")
+
+data1$periode <- 1:nrow(data1)
+# menampilkan 5 data pertama
+head(data1)
+```
+
+## Eksplorasi Data
+```{r}
+View(data1)
+str(data1)
+dim(data1)
+```
+## Data Time Series
+```{r}
+pm10.ts <- ts(data1$pm10)
+pm10.ts
+```
+
+# Analisis data
+## ringkasan data
+```{r}
+summary(pm10.ts)
+```
+
+## Pembagian Data
+```{r}
+n <- nrow(data1)
+n_train <- floor(0.8 * n)
+ 
+training <- data1[1:n_train, ]
+testing  <- data1[(n_train + 1):n, ]
+ 
+train.ts <- ts(training$pm10)
+test.ts  <- ts(testing$pm10)
+ 
+n_train
+```
+```{r}
+n_test <- nrow(testing)
+n_test
+```
+
+
+## Eksplorasi
+
+### Data Latih
+```{r}
+plot(train.ts, col = "lightblue", main = "Data Latih"); points(train.ts)
+```
+
+### Data Uji
+```{r}
+plot(test.ts, col = "pink", main = "Data Uji"); points(test.ts)
+```
+
+### Semua Data
+```{r}
+training_connect <- rbind(training, testing[1, ])
+
+ggplot() +
+  geom_line(data = training_connect, aes(x = periode, y = pm10, col = "Data Latih")) +
+  geom_line(data = testing,          aes(x = periode, y = pm10, col = "Data Uji")) +
+  labs(x = "Periode Waktu", y = "PM10", color = "Legend") +
+  scale_colour_manual(name = "Keterangan:", 
+                      breaks = c("Data Latih", "Data Uji"),
+                      values = c("blue", "red")) +
+  theme_bw() + 
+  theme(legend.position = "bottom")
+```
+
+# Metode
+
+## Simple Moving Average (SMA)
+```{r}
+m <- 3
+data.sma <- SMA(train.ts, n = m)
+ 
+data.ramal <- c(NA, data.sma)
+h_test <- n_test
+data.gab <- cbind(
+  aktual    = c(pm10.ts),
+  pemulusan = c(data.sma, rep(NA, h_test)),
+  ramalan   = c(data.ramal, rep(data.ramal[length(data.ramal)], h_test - 1))
+)
+tail(data.gab, h_test + 2)
+```
+### Plot
+```{r}
+ts.plot(pm10.ts, xlab = "Periode", ylab = "PM10", main = paste("M =", m))
+points(pm10.ts)
+lines(data.gab[, 2], col = "lightgreen", lwd = 2)
+lines(data.gab[, 3], col = "pink", lwd = 2)
+legend("topleft", c("aktual", "pemulusan", "ramalan"), lty = 1,
+       col = c("black", "lightgreen", "pink"), cex = 0.7)
+```
+### Akurasi Data Latih
+```{r}
+error_train.sma <- train.ts - data.ramal[1:length(train.ts)]
+SSE_train.sma  <- sum(error_train.sma[(m+1):length(train.ts)]^2)
+MSE_train.sma  <- mean(error_train.sma[(m+1):length(train.ts)]^2)
+RMSE_train.sma <- sqrt(MSE_train.sma)
+MAPE_train.sma <- mean(abs(error_train.sma[(m+1):length(train.ts)] /
+                             train.ts[(m+1):length(train.ts)]) * 100)
+ 
+akurasi_train.sma <- matrix(c(SSE_train.sma, MSE_train.sma, RMSE_train.sma, MAPE_train.sma))
+row.names(akurasi_train.sma) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_train.sma) <- paste("SMA m =", m)
+akurasi_train.sma
+```
+
+### Akurasi Data Uji
+```{r}
+idx_test <- (length(train.ts) + 1):n
+error_test.sma <- test.ts - data.gab[idx_test, 3]
+SSE_test.sma  <- sum(error_test.sma^2)
+MSE_test.sma  <- mean(error_test.sma^2)
+RMSE_test.sma <- sqrt(MSE_test.sma)
+MAPE_test.sma <- mean(abs(error_test.sma / test.ts) * 100)
+ 
+akurasi_test.sma <- matrix(c(SSE_test.sma, MSE_test.sma, RMSE_test.sma, MAPE_test.sma))
+row.names(akurasi_test.sma) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_test.sma) <- paste("SMA m =", m)
+akurasi_test.sma
+```
+
+## Double Moving Average (DMA)
+```{r}
+dma <- SMA(data.sma, n = m)
+At  <- 2 * data.sma - dma
+Bt  <- 2 / (m - 1) * (data.sma - dma)
+data.dma   <- At + Bt
+data.ramal2 <- c(NA, data.dma)
+ 
+t <- 1:h_test
+f <- c()
+for (i in t) {
+  f[i] <- At[length(At)] + Bt[length(Bt)] * i
+}
+ 
+data.gab2 <- cbind(
+  aktual     = c(pm10.ts),
+  pemulusan1 = c(data.sma, rep(NA, h_test)),
+  pemulusan2 = c(dma, rep(NA, h_test)),
+  At         = c(At, rep(NA, h_test)),
+  Bt         = c(Bt, rep(NA, h_test)),
+  ramalan    = c(data.ramal2, f[-1])
+)
+tail(data.gab2, h_test + 2)
+```
+
+### Plot
+```{r}
+ts.plot(pm10.ts, xlab = "Periode", ylab = "PM10", main = paste("M=", m))
+points(pm10.ts)
+lines(data.gab2[, 3], col = "lightgreen", lwd = 2)
+lines(data.gab2[, 6], col = "pink", lwd = 2)
+legend("topleft", c("aktual", "pemulusan", "ramalan"), lty = 1,
+       col = c("black", "lightgreen", "pink"), cex = 0.7)
+```
+
+### Akurasi Data Latih
+```{r}
+start_dma <- 2 * m
+error_train.dma <- train.ts - data.ramal2[1:length(train.ts)]
+SSE_train.dma  <- sum(error_train.dma[start_dma:length(train.ts)]^2)
+MSE_train.dma  <- mean(error_train.dma[start_dma:length(train.ts)]^2)
+RMSE_train.dma <- sqrt(MSE_train.dma)
+MAPE_train.dma <- mean(abs(error_train.dma[start_dma:length(train.ts)] /
+                             train.ts[start_dma:length(train.ts)]) * 100)
+ 
+akurasi_train.dma <- matrix(c(SSE_train.dma, MSE_train.dma, RMSE_train.dma, MAPE_train.dma))
+row.names(akurasi_train.dma) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_train.dma) <- paste("DMA m =", m)
+akurasi_train.dma
+```
+
+### Akurasi Data Uji
+```{r}
+error_test.dma <- test.ts - data.gab2[idx_test, 6]
+SSE_test.dma  <- sum(error_test.dma^2)
+MSE_test.dma  <- mean(error_test.dma^2)
+RMSE_test.dma <- sqrt(MSE_test.dma)
+MAPE_test.dma <- mean(abs(error_test.dma / test.ts) * 100)
+ 
+akurasi_test.dma <- matrix(c(SSE_test.dma, MSE_test.dma, RMSE_test.dma, MAPE_test.dma))
+row.names(akurasi_test.dma) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_test.dma) <- paste("DMA m =", m)
+akurasi_test.dma
+```
+
+## Simple Exponential Smoothing (SES)
+```{r}
+ses.opt <- ses(train.ts, h = n_test, alpha = NULL)
+autoplot(ses.opt) +
+  autolayer(fitted(ses.opt), series="Fitted") +
+  ylab("Membaca") + xlab("Periode")
+```
+
+### Peramalan
+```{r}
+ramalan.ses <- forecast(ses.opt, h = n_test, alpha=NULL)
+ramalan.ses
+```
+
+### Akurasi Data Latih
+```{r}
+SSE.ses   <- ses.opt$model$mse * length(train.ts)
+MSE.ses   <- SSE.ses / length(train.ts)
+RMSE.ses  <- sqrt(MSE.ses)
+sisaan.ses <- residuals(ses.opt)
+MAPE.ses   <- mean(abs(sisaan.ses[2:length(train.ts)] / train.ts[2:length(train.ts)]) * 100, na.rm = TRUE)
+akurasi_train.ses <- matrix(c(SSE.ses, MSE.ses, RMSE.ses, MAPE.ses), nrow = 4, ncol = 1)
+row.names(akurasi_train.ses) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_train.ses)  <- paste("SES alpha =", round(as.numeric(ses.opt$model$par["alpha"]), 3))
+akurasi_train.ses
+```
+### Akurasi Data Uji
+```{r}
+e.ses         <- as.numeric(ramalan.ses$mean) - as.numeric(testing$pm10)
+SSE_test.ses  <- sum(e.ses^2, na.rm = TRUE)
+MSE_test.ses  <- mean(e.ses^2, na.rm = TRUE)
+RMSE_test.ses <- sqrt(MSE_test.ses)
+MAPE_test.ses <- mean(abs(e.ses / testing$pm10) * 100, na.rm = TRUE)
+akurasi_test.ses <- matrix(c(SSE_test.ses, MSE_test.ses, RMSE_test.ses, MAPE_test.ses), 
+                           nrow = 4, ncol = 1)
+row.names(akurasi_test.ses) <- c("SSE", "MSE", "RMSE", "MAPE")
+alpha_val <- as.numeric(ses.opt$model$par["alpha"])
+colnames(akurasi_test.ses)  <- paste("SES alpha =", round(alpha_val, 3))
+akurasi_test.ses
+```
+
+## Double Exponential Smoothing (DES)
+```{r}
+des.opt <- HoltWinters(train.ts, gamma = FALSE)
+des.opt
+plot(des.opt, main = "Pemulusan Eksponensial Ganda (DES)")
+```
+
+### Peramalan
+```{r}
+ramalan.des <- forecast(des.opt, h = n_test)
+ramalan.des
+```
+
+### Akurasi Data Latih
+```{r}
+SSE.des  <- des.opt$SSE
+MSE.des  <- SSE.des / length(train.ts)
+RMSE.des <- sqrt(MSE.des)
+sisaan.des <- ramalan.des$residuals
+MAPE.des <- mean(abs(sisaan.des[3:length(train.ts)] /
+                       train.ts[3:length(train.ts)]) * 100)
+ 
+akurasi_train.des <- matrix(c(SSE.des, MSE.des, RMSE.des, MAPE.des))
+row.names(akurasi_train.des) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_train.des) <- paste0("DES alpha=", round(des.opt$alpha,3),
+                                       " beta=", round(des.opt$beta,3))
+akurasi_train.des
+```
+
+### Akurasi Data Uji
+```{r}
+e.des <- as.numeric(ramalan.des$mean) - as.numeric(testing$pm10)
+SSE_test.des  <- sum(e.des^2)
+MSE_test.des  <- mean(e.des^2)
+RMSE_test.des <- sqrt(MSE_test.des)
+MAPE_test.des <- mean(abs(e.des / testing$pm10) * 100)
+ 
+akurasi_test.des <- matrix(c(SSE_test.des, MSE_test.des, RMSE_test.des, MAPE_test.des))
+row.names(akurasi_test.des) <- c("SSE", "MSE", "RMSE", "MAPE")
+colnames(akurasi_test.des) <- paste0("DES alpha=", round(des.opt$alpha,3),
+                                      " beta=", round(des.opt$beta,3))
+akurasi_test.des
+```
+
+# Hasil Akurasi
+```{r}
+hasil_akurasi <- data.frame(
+  Metode = c("SMA", "DMA", "SES", "DES"),
+  SSE = c(SSE_test.sma, SSE_test.dma, SSE_test.ses, SSE_test.des),
+  MSE = c(MSE_test.sma, MSE_test.dma, MSE_test.ses, MSE_test.des),
+  RMSE = c(RMSE_test.sma, RMSE_test.dma, RMSE_test.ses, RMSE_test.des),
+  MAPE = c(MAPE_test.sma, MAPE_test.dma, MAPE_test.ses, MAPE_test.des)
+)
+
+hasil_akurasi
+```
+
+
+# Metode Terbaik
+
+```{r}
+
+metode_terbaik <- hasil_akurasi$Metode[
+  which.min(hasil_akurasi$MAPE)
+]
+
+hasil_terbaik <- hasil_akurasi[
+  which.min(hasil_akurasi$MAPE), 
+]
+
+metode_terbaik
+hasil_terbaik
+```
+
