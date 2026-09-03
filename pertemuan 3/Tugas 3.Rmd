@@ -335,16 +335,16 @@ Untuk menentukan `formula` model yang akan digunakan, tersedia fungsi tambahan y
 
 ```{r}
 #sama dengan model dlm q=1
-cons_lm1 <- dynlm(Marketshare ~ Xt+L(Xt),data = train.ts)
+cons_lm1 <- dynlm(Market.share ~ Price+L(Price),data = train.ts)
 
 #sama dengan model ardl p=1 q=0
-cons_lm2 <- dynlm(Yt ~ Xt+L(Yt),data = train.ts)
+cons_lm2 <- dynlm(Market.share ~ Price+L(Market.share),data = train.ts)
 
 #sama dengan ardl p=1 q=1
-cons_lm3 <- dynlm(Yt ~ Xt+L(Xt)+L(Yt),data = train.ts)
+cons_lm3 <- dynlm(Market.share ~ Price+L(Price)+L(Market.share),data = train.ts)
 
 #sama dengan dlm p=2
-cons_lm4 <- dynlm(Yt ~ Xt+L(Xt)+L(Xt,2),data = train.ts)
+cons_lm4 <- dynlm(Market.share ~ Price+L(Price)+L(Price,2),data = train.ts)
 ```
 
 ### Ringkasan Model
