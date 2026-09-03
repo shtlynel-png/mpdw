@@ -334,17 +334,20 @@ Untuk menentukan `formula` model yang akan digunakan, tersedia fungsi tambahan y
 `L(Xt, 2)` = Xt pada dua periode sebelumnya (lag ke-2).
 
 ```{r}
-#samaa dengan model dlm q=1
-cons_lm1 <- dynlm(Market.share ~ Price+L(Price),data = train.ts)
+# Load library dynlm
+library(dynlm)
 
-#sama dengan model ardl p=1 q=0
-cons_lm2 <- dynlm(Market.share ~ Price+L(Market.share),data = train.ts)
+# Sama dengan model DLM q = 1
+cons_lm1 <- dynlm(Market.share ~ Price + L(Price), data = train.ts)
 
-#sama dengan ardl p=1 q=1
-cons_lm3 <- dynlm(Market.share ~ Price+L(Price)+L(Market.share),data = train.ts)
+# Sama dengan model ARDL p = 1, q = 0
+cons_lm2 <- dynlm(Market.share ~ Price + L(Market.share), data = train.ts)
 
-#sama dengan dlm p=2
-cons_lm4 <- dynlm(Market.share ~ Price+L(Price)+L(Price,2),data = train.ts)
+# Sama dengan model ARDL p = 1, q = 1
+cons_lm3 <- dynlm(Market.share ~ Price + L(Price) + L(Market.share), data = train.ts)
+
+# Sama dengan model DLM q = 2
+cons_lm4 <- dynlm(Market.share ~ Price + L(Price) + L(Price, 2), data = train.ts)
 ```
 
 ### Ringkasan Model
@@ -381,11 +384,10 @@ if(require("lmtest")) encomptest(cons_lm1, cons_lm2)
 
 ```
 
--   Model 1 : p-value 0.31055 (\> 0.05). Artinya, penambahan lag dari Y (`L(Yt)`) tidak memberikan peningkatan signifikan.\
+-   Model 1 : p-value 0.3386 (\> 0.05). Artinya, penambahan lag dari Y (`L(Yt)`) tidak memberikan peningkatan signifikan.\
     Dengan demikian, Model 1 sudah memadai.
-
--   Model 2 : p-value = 0.00505 (\< 0.01).\
-    Artinya, penambahan lag dari X (`L(Xt)`) memberikan peningkatan signifikan.Sehingga Model 2 tidak cukup memadai tanpa tambahan variabel lag dari Xt.
+-   Model 2 : p-value 0.3411 (\> 0.05). Artinya, penambahan lag dari Y (`L(Yt)`) tidak memberikan peningkatan signifikan.\
+    Dengan demikian, Model 2 juga sudah memadai.
 
 #### Uji Autokorelasi Residual
 
@@ -452,13 +454,13 @@ Untuk membandingkan hasil peramalan dari berbagai model (Koyck, DLM 1, DLM 2, da
 par(mfrow=c(1,1))  # atur layout grafik tunggal
 
 # plot data aktual
-plot(test$Xt, test$Yt, type="b", col="black", ylim=c(120,250))
+plot(test$Price, test$Market.share, type="b", col="black", ylim=c(6,10))
 
 # tambahkan garis ramalan dari masing-masing model
-points(test$Xt, fore.koyck$forecasts, col="red");   lines(test$Xt, fore.koyck$forecasts, col="red")
-points(test$Xt, fore.dlm$forecasts, col="blue");    lines(test$Xt, fore.dlm$forecasts, col="blue")
-points(test$Xt, fore.dlm2$forecasts, col="orange"); lines(test$Xt, fore.dlm2$forecasts, col="orange")
-points(test$Xt, fore.ardl$forecasts, col="green");  lines(test$Xt, fore.ardl$forecasts, col="green")
+points(test$Price, fore.koyck$forecasts, col="red");   lines(test$Price, fore.koyck$forecasts, col="red")
+points(test$Price, fore.dlm$forecasts, col="blue");    lines(test$Price, fore.dlm$forecasts, col="blue")
+points(test$Price, fore.dlm2$forecasts, col="orange"); lines(test$Price, fore.dlm2$forecasts, col="orange")
+points(test$Price, fore.ardl$forecasts, col="green");  lines(test$Price, fore.ardl$forecasts, col="green")
 
 # legenda model
 legend("topleft",
