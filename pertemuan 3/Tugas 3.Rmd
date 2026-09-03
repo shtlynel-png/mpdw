@@ -334,7 +334,7 @@ Untuk menentukan `formula` model yang akan digunakan, tersedia fungsi tambahan y
 `L(Xt, 2)` = Xt pada dua periode sebelumnya (lag ke-2).
 
 ```{r}
-#sama dengan model dlm q=1
+#samaa dengan model dlm q=1
 cons_lm1 <- dynlm(Market.share ~ Price+L(Price),data = train.ts)
 
 #sama dengan model ardl p=1 q=0
