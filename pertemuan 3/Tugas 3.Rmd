@@ -494,7 +494,7 @@ finiteDLMauto(formula = logprice ~ interest+logm1,
 Fungsi akan mencoba model dengan lag minimal q=1 hingga maksimal q=5. Dari hasil, model terbaik yang ditemukan menggunakan lag q=5 dengan nilai AIC = -463.1393.
 
 ```{r}
-# Model dengan q = 5 (lag sampai periode ke-5)
+# Model dengan q = 5 (lag sampai periode ke 5)
 model.dlmberganda = dlm(formula = logprice ~ interest + logm1,
                         data = data.frame(data1), q = 5)
 summary(model.dlmberganda)
