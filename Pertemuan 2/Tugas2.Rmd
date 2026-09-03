@@ -1,1 +1,977 @@
+---
+title: "Praktikum 2"
+date: "1 September 2026"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 3
+    theme: cosmo
+    highlight: tango
+    number_sections: true
+    df_print: paged
+---
 
+<style>
+
+body {
+  background-color: #F7E9D7 !important;
+  font-family: "Poppins", sans-serif;
+  color: #333333;
+  padding: 40px;
+}
+
+
+
+h1, .title, .author-name, .fa, .fas, .no-highlight {
+  color: #4ECDC4 !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+
+
+h2, h3, .section-title {
+  color: #FF6B2B !important;
+  font-weight: 800;
+  border-bottom: 3px solid #FF9E7C;
+  margin-top: 30px;
+}
+
+
+
+pre, blockquote, .chunk-output {
+  background-color: #F7B6B6 !important;
+  border-radius: 15px;
+  padding: 20px;
+  border: none;
+  box-shadow: 8px 8px 0px rgba(255, 158, 124, 0.25);
+}
+
+strong:not(.no-highlight), 
+b:not(.no-highlight), 
+code, 
+mark {
+  background-color: #FFE066 !important;
+  color: #5d4037 !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+
+pre code {
+  background-color: transparent !important;
+  color: #3D405B !important;
+}
+
+</style>
+
+`r fontawesome::fa("user", fill = "#3498db")` 
+<span class="no-highlight">**Putri Dwi Suci Sri Mulyaningsih Sitanggang** (M0401241033)</span>
+
+# Library
+
+```{r}
+library(dplyr)
+library(lmtest)
+library(orcutt)
+library(HoRM)
+```
+
+# Data 1: Market Share dan Price
+
+Data pertama terdiri atas dua peubah, yaitu **Market Share** sebagai peubah respon (Y) dan **Price** sebagai peubah prediktor (X).
+
+Pada analisis ini, periode tidak digunakan sebagai peubah dalam model. Urutan data tetap dipertahankan karena diperlukan dalam pemeriksaan autokorelasi dan proses transformasi Cochrane-Orcutt serta Hildreth-Lu.
+
+## Input Data
+
+```{r}
+marketshare <- c(
+  3.63, 4.20, 3.33, 4.54, 2.89,
+  4.87, 4.90, 5.29, 6.18, 7.20,
+  7.25, 6.09, 6.80, 8.65, 8.43,
+  8.29, 7.18, 7.90, 8.45, 8.23
+)
+
+price <- c(
+  0.97, 0.95, 0.99, 0.91, 0.98,
+  0.90, 0.89, 0.86, 0.85, 0.82,
+  0.79, 0.83, 0.81, 0.77, 0.76,
+  0.80, 0.83, 0.79, 0.76, 0.78
+)
+
+dt1 <- data.frame(
+  Market_Share = marketshare,
+  Price = price
+)
+
+print(dt1)
+```
+
+## Eksplorasi Data Market Share dan Price
+
+### Scatter Plot
+
+```{r}
+plot(
+  dt1$Price,
+  dt1$Market_Share,
+  pch = 20,
+  main = "Scatter Plot Price vs Market Share",
+  xlab = "Price",
+  ylab = "Market Share"
+)
+```
+
+Berdasarkan *scatter plot* yang dihasilkan, terlihat bahwa titik-titik pengamatan membentuk pola yang cenderung menurun dari kiri atas ke kanan bawah. Hal ini menunjukkan adanya hubungan negatif antara peubah Price dan Market Share. Dengan kata lain, ketika nilai Price mengalami peningkatan, Market Share cenderung mengalami penurunan.
+
+### Korelasi
+
+```{r}
+cor(dt1$Price, dt1$Market_Share)
+```
+Berdasarkan hasil perhitungan korelasi, diperoleh nilai korelasi sebesar $-0.9753$. Nilai korelasi yang mendekati $-1$ menunjukkan bahwa Price dan Market Share memiliki hubungan linear negatif yang sangat kuat. Artinya, perubahan pada Price cenderung diikuti oleh perubahan Market Share dengan arah yang berlawanan.
+
+## Regresi Linear Market Share terhadap Price
+
+Model regresi linear dibentuk dengan Market Share sebagai peubah respon dan Price sebagai peubah prediktor.
+
+```{r}
+model1 <- lm(Market_Share ~ Price, data = dt1)
+
+summary(model1)
+```
+Berdasarkan hasil analisis regresi linear, diperoleh model regresi:
+
+$$Market Share=26.90989−24.28977(Price)$$
+
+Nilai intersep sebesar $26.90989$ menunjukkan nilai dugaan Market Share ketika Price bernilai $0$. Sementara itu, koefisien Price sebesar $-24.28977$ menunjukkan bahwa setiap kenaikan satu satuan Price diperkirakan akan menurunkan Market Share sebesar $24.28977$ satuan.
+
+Hasil uji-t menunjukkan bahwa p-value untuk Price sebesar $3.02 \times 10^{-13}$, sedangkan p-value untuk intersep sebesar $3.39 \times 10^{-15}$. Kedua nilai tersebut lebih kecil dari $\alpha = 0.05$, sehingga $H_0$ ditolak. Dengan demikian, Price berpengaruh nyata terhadap Market Share pada taraf nyata $5%$.
+
+Hasil uji-F juga menghasilkan p-value sebesar $3.019 \times 10^{-13}$ yang lebih kecil dari $\alpha = 0.05$. Oleh karena itu, model regresi secara keseluruhan signifikan.
+
+Nilai koefisien determinasi yang diperoleh adalah $R^2 = 0.9511$. Artinya, sebesar $95.11%$ keragaman Market Share dapat dijelaskan oleh Price dalam model, sedangkan sebesar $4.89%$ sisanya dijelaskan oleh faktor lain di luar model.
+
+Persamaan regresi dapat diperoleh dengan:
+
+```{r}
+coef(model1)
+```
+
+```{r}
+cat(
+  "Market Share = ",
+  round(coef(model1)[1], 4),
+  " + ",
+  round(coef(model1)[2], 4),
+  " Price",
+  sep = ""
+)
+```
+
+## Diagnostik Sisaan
+
+```{r}
+#Sisaan dan Fitted Value
+sisaan1<- residuals(model1)
+fitValue1<- predict(model1)
+
+#Diagnostik dengan Eksploratif
+par(mfrow = c(2,2))
+qqnorm(sisaan1)
+qqline(sisaan1, col = "steelblue", lwd = 2)
+plot(fitValue1, sisaan1, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Fitted Values", main = "Sisaan vs Fitted Values")
+abline(a = 0, b = 0, lwd = 2)
+hist(sisaan1, col = "steelblue")
+plot(1:length(sisaan1), sisaan1, col = "steelblue", pch = 20, xlab = "Order", ylab = "Sisaan", main = "Sisaan vs Order")
+lines(1:length(sisaan1), sisaan1, col = "pink")
+abline(a = 0, b = 0, lwd = 2)
+```
+
+Setelah model regresi diperoleh, dilakukan pemeriksaan terhadap sisaan untuk mengetahui apakah asumsi-asumsi yang mendasari model telah terpenuhi. Pemeriksaan dilakukan secara eksploratif menggunakan beberapa grafik diagnostik. Berdasarkan grafik yang diperoleh, masih terdapat pola tertentu pada sisaan sehingga perlu dilakukan pemeriksaan lebih lanjut terhadap kemungkinan adanya autokorelasi.
+## Uji Normalitas Sisaan
+
+Hipotesis yang digunakan:
+
+- H0: sisaan mengikuti sebaran normal.
+- H1: sisaan tidak mengikuti sebaran normal.
+
+```{r}
+shapiro.test(sisaan1)
+```
+Berdasarkan hasil uji normalitas yang dilakukan terhadap sisaan, diperoleh hasil pengujian yang digunakan untuk menentukan apakah sisaan dapat dianggap mengikuti distribusi normal. Keputusan pengujian dilakukan dengan membandingkan p-value dengan $\alpha = 0.05$. Apabila p-value lebih besar dari $\alpha$, maka $H_0$ tidak ditolak sehingga belum terdapat bukti bahwa sisaan tidak berdistribusi normal.
+## Identifikasi Autokorelasi
+
+Autokorelasi dieksplorasi menggunakan plot ACF dan PACF.
+
+```{r}
+par(mfrow = c(1,2))
+
+acf(
+  sisaan1,
+  main = "ACF Residual"
+)
+
+pacf(
+  sisaan1,
+  main = "PACF Residual"
+)
+```
+
+Berdasarkan plot ACF dan PACF, pemeriksaan dilakukan untuk melihat pola korelasi sisaan berdasarkan urutan pengamatan. Hasil plot menunjukkan adanya indikasi autokorelasi pada beberapa lag. Oleh karena itu, pemeriksaan dilanjutkan menggunakan uji Durbin-Watson sebagai pengujian secara formal.
+
+Selanjutnya dilakukan uji formal Durbin-Watson.
+
+Hipotesis yang digunakan:
+
+- H0: tidak terdapat autokorelasi.
+- H1: terdapat autokorelasi.
+
+```{r}
+dwtest(model1)
+```
+Berdasarkan hasil uji Durbin-Watson, diperoleh nilai $DW = 1.1358161$. Nilai tersebut menunjukkan adanya indikasi autokorelasi positif pada sisaan. Hasil pengujian formal juga menunjukkan p-value yang lebih kecil dari $\alpha = 0.05$, sehingga $H_0$ ditolak. Dengan demikian, terdapat cukup bukti bahwa sisaan mengalami autokorelasi pada model awal.
+
+Adanya autokorelasi menunjukkan bahwa sisaan antar-pengamatan tidak sepenuhnya independen. Oleh karena itu, diperlukan penanganan autokorelasi agar diperoleh model regresi yang lebih sesuai.
+## Penanganan Autokorelasi
+Karena berdasarkan hasil uji Durbin-Watson terdapat indikasi autokorelasi, maka dilakukan penanganan menggunakan dua metode, yaitu **Cochrane-Orcutt** dan **Hildreth-Lu**.
+
+### Metode Cochrane-Orcutt
+
+```{r}
+model1CO <- cochrane.orcutt(model1)
+
+model1CO
+```
+
+Nilai rho hasil estimasi Cochrane-Orcutt:
+
+```{r}
+rho1CO <- model1CO$rho
+
+rho1CO
+```
+Penanganan autokorelasi pertama dilakukan menggunakan metode Cochrane-Orcutt. Berdasarkan hasil estimasi, diperoleh nilai $\hat{\rho}$ yang kemudian digunakan untuk melakukan transformasi terhadap model.
+
+Setelah dilakukan transformasi, diperoleh persamaan regresi akhir:
+
+$$ \text{Market Share} = 26.7221 - 24.0841(\text{Price}) $$
+
+Hasil tersebut menunjukkan bahwa setelah autokorelasi ditangani, hubungan antara Price dan Market Share masih memiliki arah negatif. Koefisien Price sebesar $-24.0841$ menunjukkan bahwa peningkatan Price tetap berkaitan dengan penurunan Market Share.
+
+Model setelah transformasi Cochrane-Orcutt kemudian diperiksa kembali menggunakan Durbin-Watson.
+
+```{r}
+dwtest(model1CO)
+```
+Hasil pemeriksaan kembali terhadap autokorelasi menunjukkan bahwa nilai DW meningkat dibandingkan model awal dan p-value telah lebih besar dari $\alpha = 0.05$. Dengan demikian, setelah menggunakan metode Cochrane-Orcutt, belum terdapat bukti yang cukup untuk menyatakan adanya autokorelasi pada sisaan.
+### Transformasi Manual Cochrane-Orcutt
+
+```{r}
+marketshare.trans <- 
+  marketshare[-1] - rho1CO * marketshare[-length(marketshare)]
+
+price.trans <- 
+  price[-1] - rho1CO * price[-length(price)]
+
+model1COmanual <- lm(
+  marketshare.trans ~ price.trans
+)
+
+summary(model1COmanual)
+```
+
+Koefisien regresi kemudian dikembalikan ke bentuk persamaan awal.
+
+```{r}
+b0_star1 <- coef(model1COmanual)[1]
+b1_1 <- coef(model1COmanual)[2]
+
+b0_1 <- b0_star1 / (1 - rho1CO)
+
+b0_1
+b1_1
+```
+
+Persamaan akhir Cochrane-Orcutt:
+
+```{r}
+cat(
+  "Market Share = ",
+  round(b0_1, 4),
+  " + ",
+  round(b1_1, 4),
+  " Price",
+  sep = ""
+)
+```
+
+## Metode Hildreth-Lu
+
+Metode Hildreth-Lu digunakan dengan mencari nilai rho yang menghasilkan SSE terkecil.
+
+```{r}
+#Penanganan Autokorelasi Hildreth lu
+# Hildreth-Lu
+hildreth.lu.func <- function(r, model1) {
+  
+  y <- model.response(model.frame(model1))
+  x <- model.matrix(model1)[, -1]
+  
+  n <- length(y)
+  t <- 2:n
+  
+  y_trans <- y[t] - r * y[t - 1]
+  x_trans <- x[t] - r * x[t - 1]
+  
+  return(lm(y_trans ~ x_trans))
+}
+
+#Pencariab rho yang meminimumkan SSE
+r <- seq(0.1, 0.9, by = 0.1)
+
+tab1 <- data.frame(
+  rho = r,
+  SSE = sapply(r, function(i) {
+    deviance(hildreth.lu.func(i, model1))
+  })
+)
+
+round(tab1, 4)
+```
+
+### Pencarian rho
+
+```{r}
+#Rho optimal di sekitar 0.4
+rOpt <- seq(0.3,0.6, by= 0.001)
+tabOpt <- data.frame("rho" = rOpt, "SSE" = sapply(rOpt, function(i){deviance(hildreth.lu.func(i, model1))}))
+
+head(tabOpt[order(tabOpt$SSE), ], 10)
+
+#Grafik SSE optimum
+par(mfrow = c(1,1))
+plot(tab1$SSE ~ tab1$rho , type = "l", xlab = "Rho", ylab = "SSE")
+abline(v = tabOpt[tabOpt$SSE==min(tabOpt$SSE),"rho"], lty = 2, col="red",lwd=2)
+text(x=0.425, y=2.659368, labels = "rho=0.425", cex = 0.5)
+
+```
+
+Nilai rho dengan SSE terkecil:
+
+```{r}
+rho1_HL <- tab1$rho[which.min(tab1$SSE)]
+
+rho1_HL
+```
+
+Untuk memperoleh nilai rho yang lebih teliti:
+
+```{r}
+rOpt1 <- seq(
+  max(0, rho1_HL - 0.1),
+  min(0.99, rho1_HL + 0.1),
+  by = 0.001
+)
+
+tabOpt1 <- data.frame(
+  rho = rOpt1,
+  SSE = sapply(
+    rOpt1,
+    function(i) {
+      deviance(hildreth.lu.func(i, model1))
+    }
+  )
+)
+
+head(
+  tabOpt1[order(tabOpt1$SSE),]
+)
+```
+
+Nilai rho optimum:
+
+```{r}
+rho1_HL <- tabOpt1$rho[which.min(tabOpt1$SSE)]
+
+rho1_HL
+```
+
+### Model Hildreth-Lu
+
+```{r}
+model1HL <- hildreth.lu.func(
+  rho1_HL,
+  model1
+)
+
+summary(model1HL)
+```
+
+### Transformasi Balik
+
+```{r}
+b0_star1HL <- coef(model1HL)[1]
+b1_1HL <- coef(model1HL)[2]
+
+b0_1HL <- b0_star1HL / (1 - rho1_HL)
+
+b0_1HL
+b1_1HL
+```
+
+Persamaan akhir Hildreth-Lu:
+
+```{r}
+cat(
+  "Market Share = ",
+  round(b0_1HL, 4),
+  " + ",
+  round(b1_1HL, 4),
+  " Price",
+  sep = ""
+)
+```
+Penanganan berikutnya dilakukan menggunakan metode Hildreth-Lu. Metode ini menentukan nilai $\rho$ berdasarkan nilai SSE terkecil. Dari beberapa nilai $\rho$ yang dicobakan, dipilih nilai yang menghasilkan SSE minimum sebagai nilai $\rho$ optimum.
+
+Berdasarkan hasil pencarian, diperoleh nilai $\rho$ optimum yang kemudian digunakan untuk membentuk model Hildreth-Lu. Setelah dilakukan transformasi balik, diperoleh persamaan:
+
+$$ \text{Market Share} = 26.7227 - 24.0848(\text{Price}) $$
+
+Persamaan tersebut menunjukkan bahwa hubungan antara Price dan Market Share setelah penanganan tetap bersifat negatif. Dibandingkan dengan model awal, nilai koefisien Price mengalami sedikit perubahan setelah dilakukan transformasi untuk menangani autokorelasi.
+
+### Pemeriksaan Autokorelasi setelah Hildreth-Lu
+
+```{r}
+dwtest(model1HL)
+```
+Berdasarkan hasil uji Durbin-Watson pada model Hildreth-Lu, diperoleh nilai $DW = 1.9577$ dengan p-value sebesar $0.4148$. Karena p-value lebih besar dari $\alpha = 0.05$, maka $H_0$ tidak ditolak. Dengan demikian, belum terdapat bukti yang cukup untuk menyatakan adanya autokorelasi pada sisaan model Hildreth-Lu.
+
+## Perbandingan Model Market Share
+
+SSE model awal:
+
+```{r}
+sse1_awal <- deviance(model1)
+```
+
+SSE Cochrane-Orcutt:
+
+```{r}
+sse1_CO <- deviance(model1COmanual)
+```
+
+SSE Hildreth-Lu:
+
+```{r}
+sse1_HL <- deviance(model1HL)
+```
+
+Perbandingan:
+
+```{r}
+n <- length(dt1$Market_Share)
+
+akurasi1 <- data.frame(
+  Metode = c(
+    "Model Awal",
+    "Cochrane-Orcutt",
+    "Hildreth-Lu"
+  ),
+  SSE = c(
+    sse1_awal,
+    sse1_CO,
+    sse1_HL
+  ),
+  MSE = c(
+    sse1_awal,
+    sse1_CO,
+    sse1_HL
+  ) / n
+)
+akurasi1
+```
+
+Berdasarkan hasil perbandingan, model awal menghasilkan SSE sebesar $3.308257$ dan MSE sebesar $0.1654129$. Setelah dilakukan penanganan menggunakan metode Cochrane-Orcutt, nilai SSE menjadi $2.659368$ dengan MSE sebesar $0.1329684$. Hasil yang sama diperoleh pada metode Hildreth-Lu, yaitu SSE sebesar $2.659368$ dan MSE sebesar $0.1329684$.
+
+Nilai SSE dan MSE yang lebih kecil menunjukkan bahwa model setelah penanganan memiliki tingkat kesalahan yang lebih rendah dibandingkan model awal. Dengan demikian, metode Cochrane-Orcutt dan Hildreth-Lu memberikan hasil yang lebih baik dalam menangani permasalahan autokorelasi pada data Market Share dan Price.
+## Simpulan Market Share dan Price
+
+Berdasarkan hasil analisis, diperoleh hubungan linear negatif yang sangat kuat antara Price dan Market Share dengan nilai korelasi sebesar $-0.9752564$. Model regresi awal yang diperoleh adalah:
+
+$$ \text{Market Share} = 26.90989 - 24.28977(\text{Price}) $$
+
+Nilai $R^2 = 0.9511$ menunjukkan bahwa sebesar $95.11%$ keragaman Market Share dapat dijelaskan oleh Price.
+
+Pada model awal ditemukan adanya autokorelasi berdasarkan hasil uji Durbin-Watson. Permasalahan tersebut kemudian ditangani menggunakan metode Cochrane-Orcutt dan Hildreth-Lu. Kedua metode menghasilkan nilai SSE dan MSE yang lebih kecil dibandingkan model awal. Selain itu, hasil uji Durbin-Watson setelah penanganan menunjukkan bahwa tidak terdapat cukup bukti adanya autokorelasi pada taraf nyata $5%$. Dengan demikian, model setelah penanganan autokorelasi memberikan hasil yang lebih baik dibandingkan model awal.
+
+---
+
+# Data 2: Sales dan Advertising
+
+Data kedua terdiri atas peubah **Sales** sebagai peubah respon (Y) dan **Advertising** sebagai peubah prediktor (X).
+
+Peubah Year yang terdapat pada data tidak digunakan sebagai peubah dalam model sesuai dengan instruksi tugas. Namun, urutan observasi tetap dipertahankan karena digunakan dalam pemeriksaan dan penanganan autokorelasi.
+
+## Input Data
+
+```{r}
+sales <- c(
+  11.7, 12.0, 12.3, 12.8, 13.1,
+    13.6, 13.9, 14.4, 14.7, 15.3,
+    15.5, 15.8, 16.1, 16.6, 16.9,
+    16.7, 16.9, 17.4, 17.6, 17.9,
+    18.0, 17.9, 18.0, 18.2, 18.2,
+    18.3, 18.6, 19.2, 19.3, 19.5,
+    19.2, 19.3, 19.5, 20.0, 20.0,
+    19.9, 19.8, 19.9, 20.2, 21.0
+)
+
+advertising <- c(
+  9.4, 9.6, 10.0, 10.4, 10.8,
+    10.9, 11.7, 12.2, 12.5, 12.9,
+    13.0, 13.2, 13.8, 14.2, 14.6,
+    14.4, 15.0, 15.4, 15.7, 15.9,
+    15.9, 16.0, 16.3, 16.2, 16.8,
+    17.3, 17.6, 18.1, 18.3, 18.5,
+    18.7, 18.9, 19.2, 20.0, 20.0,
+    20.3, 20.4, 21.0, 21.5, 22.1
+)
+
+dt2 <- data.frame(
+  Sales = sales,
+  Advertising = advertising
+)
+
+print(dt2)
+```
+
+## Eksplorasi Data Sales dan Advertising
+
+### Scatter Plot
+
+```{r}
+plot(
+  dt2$Advertising,
+  dt2$Sales,
+  pch = 20,
+  main = "Scatter Plot Advertising vs Sales",
+  xlab = "Advertising",
+  ylab = "Sales"
+)
+```
+
+Berdasarkan *scatter plot* Advertising terhadap Sales, terlihat bahwa titik-titik pengamatan membentuk pola yang cenderung meningkat dari kiri bawah menuju kanan atas. Pola tersebut menunjukkan adanya hubungan positif antara Advertising dan Sales. Dengan demikian, peningkatan Advertising cenderung diikuti oleh peningkatan Sales.
+### Korelasi
+
+```{r}
+cor(dt2$Advertising, dt2$Sales)
+```
+Berdasarkan hasil perhitungan korelasi, diperoleh nilai korelasi sebesar $0.9795849$. Nilai tersebut mendekati $1$, sehingga menunjukkan bahwa Advertising dan Sales memiliki hubungan linear positif yang sangat kuat. Artinya, semakin tinggi nilai Advertising, Sales juga cenderung mengalami peningkatan
+
+## Regresi Linear Sales terhadap Advertising
+
+```{r}
+model2 <- lm(
+  Sales ~ Advertising,
+  data = dt2
+)
+
+summary(model2)
+```
+
+Persamaan regresi:
+
+```{r}
+coef(model2)
+```
+
+```{r}
+cat(
+  "Sales = ",
+  round(coef(model2)[1], 4),
+  " + ",
+  round(coef(model2)[2], 4),
+  " Advertising",
+  sep = ""
+)
+```
+Berdasarkan hasil analisis regresi linear, diperoleh persamaan:
+
+$$ \text{Sales} = 5.9651319 + 0.7103463(\text{Advertising}) $$
+
+Nilai intersep sebesar $5.9651319$ menunjukkan nilai dugaan Sales ketika Advertising bernilai $0$. Sementara itu, koefisien Advertising sebesar $0.7103463$ berarti bahwa setiap kenaikan satu satuan Advertising diperkirakan akan meningkatkan Sales sebesar $0.7103463$ satuan.
+
+Hasil uji-t menunjukkan bahwa p-value untuk Advertising lebih kecil dari $2 \times 10^{-16}$. Karena nilai tersebut lebih kecil dari $\alpha = 0.05$, maka $H_0$ ditolak. Dengan demikian, Advertising berpengaruh nyata terhadap Sales pada taraf nyata $5%$.
+
+Hasil uji-F juga menghasilkan p-value kurang dari $2.2 \times 10^{-16}$. Oleh karena itu, model regresi secara keseluruhan signifikan.
+
+Nilai koefisien determinasi yang diperoleh sebesar $R^2 = 0.9596$. Hal ini berarti bahwa sebesar $95.96%$ keragaman Sales dapat dijelaskan oleh Advertising dalam model, sedangkan sebesar $4.04%$ sisanya dijelaskan oleh faktor lain di luar model.
+
+## Diagnostik Sisaan
+
+```{r}
+sisaan2 <- residuals(model2)
+fitValue2 <- fitted(model2)
+
+par(mfrow = c(2,2))
+
+qqnorm(sisaan2)
+qqline(sisaan2)
+
+plot(
+  fitValue2,
+  sisaan2,
+  pch = 20,
+  xlab = "Fitted Value",
+  ylab = "Residual",
+  main = "Residual vs Fitted"
+)
+abline(h = 0)
+
+hist(
+  sisaan2,
+  main = "Histogram Residual",
+  xlab = "Residual"
+)
+
+plot(
+  sisaan2,
+  pch = 20,
+  xlab = "Observation",
+  ylab = "Residual",
+  main = "Residual vs Observation"
+)
+lines(sisaan2)
+abline(h = 0)
+```
+
+Setelah model regresi terbentuk, dilakukan pemeriksaan terhadap sisaan untuk mengetahui kesesuaian model. Pemeriksaan dilakukan melalui grafik diagnostik, termasuk plot sisaan dan pola sisaan berdasarkan urutan pengamatan. Hasil eksplorasi menunjukkan adanya pola pada sisaan sehingga pemeriksaan autokorelasi perlu dilakukan lebih lanjut.
+
+## Uji Normalitas Sisaan
+
+```{r}
+shapiro.test(sisaan2)
+```
+
+## Identifikasi Autokorelasi
+
+```{r}
+par(mfrow = c(1,2))
+
+acf(
+  sisaan2,
+  main = "ACF Residual"
+)
+
+pacf(
+  sisaan2,
+  main = "PACF Residual"
+)
+```
+
+Berdasarkan plot ACF dan PACF, terlihat adanya korelasi pada sisaan untuk beberapa lag. Kondisi tersebut memberikan indikasi bahwa terdapat autokorelasi pada model regresi awal. Untuk memastikan indikasi tersebut, selanjutnya dilakukan uji Durbin-Watson.
+
+
+Uji Durbin-Watson:
+
+```{r}
+dwtest(model2)
+```
+Berdasarkan hasil uji Durbin-Watson, diperoleh nilai $DW = 0.16204$ dengan p-value kurang dari $2.2 \times 10^{-16}$. Karena p-value lebih kecil dari $\alpha = 0.05$, maka $H_0$ ditolak. Dengan demikian, terdapat bukti yang sangat kuat bahwa sisaan mengalami autokorelasi positif pada model awal.
+
+## Penanganan Autokorelasi
+
+### Metode Cochrane-Orcutt
+
+```{r}
+model2CO <- cochrane.orcutt(model2)
+
+model2CO
+```
+
+Nilai rho:
+
+```{r}
+rho2CO <- model2CO$rho
+
+rho2CO
+```
+
+Pemeriksaan kembali:
+
+```{r}
+dwtest(model2CO)
+```
+Berdasarkan hasil metode Cochrane-Orcutt, diperoleh nilai $\hat{\rho} = 0.9031233$. Nilai tersebut digunakan untuk melakukan transformasi terhadap model regresi awal.
+
+Model hasil Cochrane-Orcutt yang diperoleh adalah:
+
+$$ \text{Sales} = 10.252375 + 0.488489(\text{Advertising}) $$
+
+Koefisien Advertising tetap bernilai positif, sehingga hubungan antara Advertising dan Sales masih searah setelah dilakukan penanganan autokorelasi.
+
+Hasil pemeriksaan menunjukkan nilai DW meningkat dari $0.16204$ pada model awal menjadi $1.9393$ setelah transformasi, dengan p-value sebesar $0.378$. Karena p-value lebih besar dari $\alpha = 0.05$, maka $H_0$ tidak ditolak. Dengan demikian, belum terdapat bukti yang cukup untuk menyatakan adanya autokorelasi setelah metode Cochrane-Orcutt diterapkan.
+### Transformasi Manual Cochrane-Orcutt
+
+```{r}
+sales.trans <- 
+  sales[-1] - rho2CO * sales[-length(sales)]
+
+advertising.trans <- 
+  advertising[-1] - rho2CO * advertising[-length(advertising)]
+
+model2COmanual <- lm(
+  sales.trans ~ advertising.trans
+)
+
+summary(model2COmanual)
+```
+
+Transformasi balik:
+
+```{r}
+b0_star2 <- coef(model2COmanual)[1]
+b1_2 <- coef(model2COmanual)[2]
+
+b0_2 <- b0_star2 / (1 - rho2CO)
+
+b0_2
+b1_2
+```
+
+Persamaan akhir:
+
+```{r}
+cat(
+  "Sales = ",
+  round(b0_2, 4),
+  " + ",
+  round(b1_2, 4),
+  " Advertising",
+  sep = ""
+)
+```
+Transformasi manual dilakukan menggunakan nilai $\hat{\rho}$ yang diperoleh dari metode Cochrane-Orcutt. Hasil transformasi kemudian digunakan untuk memperoleh kembali koefisien regresi pada skala awal.
+
+Berdasarkan hasil transformasi balik, diperoleh model yang menunjukkan hubungan positif antara Advertising dan Sales. Hasil tersebut konsisten dengan model Cochrane-Orcutt yang diperoleh menggunakan packages.
+
+## Metode Hildreth-Lu
+
+Fungsi Hildreth-Lu:
+
+```{r}
+#Penanganan Autokorelasi Hildreth lu
+# Hildreth-Lu
+hildreth.lu.func <- function(r, model2) {
+  y <- model.response(model.frame(model2))
+  x <- model.matrix(model2)[, -1]
+  n <- length(y)
+  t <- 2:n
+  y_trans <- y[t] - r * y[t - 1]
+  x_trans <- x[t] - r * x[t - 1]
+  return(lm(y_trans ~ x_trans))
+}
+ 
+```
+
+Pencarian rho:
+
+```{r}
+r <- seq(0.1, 0.9, by = 0.1)
+
+tab2 <- data.frame(
+  rho = r,
+  SSE = sapply(
+    r,
+    function(i) {
+      deviance(hildreth.lu.func(i, model2))
+    }
+  )
+)
+
+round(tab2, 4)
+```
+
+Nilai rho dengan SSE terkecil:
+
+```{r}
+rho2_HL <- tab2$rho[which.min(tab2$SSE)]
+
+rho2_HL
+```
+
+Pencarian rho yang lebih teliti:
+
+```{r}
+rOpt2 <- seq(
+  max(0, rho2_HL - 0.1),
+  min(0.99, rho2_HL + 0.1),
+  by = 0.001
+)
+
+tabOpt2 <- data.frame(
+  rho = rOpt2,
+  SSE = sapply(
+    rOpt2,
+    function(i) {
+      deviance(hildreth.lu.func(i, model2))
+    }
+  )
+)
+
+head(
+  tabOpt2[order(tabOpt2$SSE),]
+)
+```
+
+Nilai rho optimum:
+
+```{r}
+rho2_HL <- tabOpt2$rho[which.min(tabOpt2$SSE)]
+
+rho2_HL
+```
+
+### Model Hildreth-Lu
+
+```{r}
+model2HL <- hildreth.lu.func(
+  rho2_HL,
+  model2
+)
+
+summary(model2HL)
+```
+
+### Transformasi Balik
+
+```{r}
+b0_star2HL <- coef(model2HL)[1]
+b1_2HL <- coef(model2HL)[2]
+
+b0_2HL <- b0_star2HL / (1 - rho2_HL)
+
+b0_2HL
+b1_2HL
+```
+
+Persamaan akhir:
+
+```{r}
+cat(
+  "Sales = ",
+  round(b0_2HL, 4),
+  " + ",
+  round(b1_2HL, 4),
+  " Advertising",
+  sep = ""
+)
+```
+Metode Hildreth-Lu dilakukan dengan mencari nilai $\rho$ yang menghasilkan SSE paling kecil. Nilai $\rho$ optimum tersebut kemudian digunakan dalam proses transformasi model.
+
+Berdasarkan hasil transformasi balik, diperoleh persamaan:
+
+$$ \text{Sales} = 10.2475 + 0.4887(\text{Advertising}) $$
+
+Nilai koefisien Advertising sebesar $0.4887$ tetap menunjukkan hubungan positif antara Advertising dan Sales. Dengan demikian, setelah autokorelasi ditangani, peningkatan Advertising masih diikuti oleh peningkatan Sales
+### Pemeriksaan Autokorelasi setelah Hildreth-Lu
+
+```{r}
+dwtest(model2HL)
+```
+Berdasarkan hasil uji Durbin-Watson pada model Hildreth-Lu, diperoleh nilai $DW = 1.9393$ dengan p-value sebesar $0.378$. Karena p-value lebih besar dari $\alpha = 0.05$, maka $H_0$ tidak ditolak. Dengan demikian, belum terdapat bukti yang cukup untuk menyatakan adanya autokorelasi pada sisaan model setelah dilakukan metode Hildreth-Lu.
+
+## Perbandingan Model Sales dan Advertising
+
+```{r}
+sse2_awal <- deviance(model2)
+
+sse2_CO <- deviance(model2COmanual)
+
+sse2_HL <- deviance(model2HL)
+
+n <- length(dt2$Sales)
+
+akurasi2 <- data.frame(
+  Metode = c(
+    "Model Awal",
+    "Cochrane-Orcutt",
+    "Hildreth-Lu"
+  ),
+  SSE = c(
+    sse2_awal,
+    sse2_CO,
+    sse2_HL
+  ),
+  MSE = c(
+    sse2_awal,
+    sse2_CO,
+    sse2_HL
+  ) / n
+)
+akurasi2
+
+```
+
+Berdasarkan hasil perbandingan, model awal memiliki SSE sebesar $10.554532$ dan MSE sebesar $0.26386331$. Setelah dilakukan penanganan menggunakan Cochrane-Orcutt, SSE turun menjadi $1.291225$ dengan MSE sebesar $0.03228064$. Sementara itu, metode Hildreth-Lu menghasilkan SSE sebesar $1.291226$ dan MSE sebesar $0.03228064$.
+
+Penurunan SSE dan MSE yang cukup besar menunjukkan bahwa kedua metode penanganan autokorelasi mampu memperbaiki model awal. Nilai SSE Cochrane-Orcutt dan Hildreth-Lu juga sangat berdekatan, sehingga kedua metode memberikan hasil yang hampir sama.
+
+## Simpulan Sales dan Advertising
+
+Berdasarkan hasil analisis, Advertising dan Sales memiliki hubungan linear positif yang sangat kuat dengan nilai korelasi sebesar $0.9795849$. Model regresi awal yang diperoleh adalah:
+
+$$ \text{Sales} = 5.9651319 + 0.7103463(\text{Advertising}) $$
+
+Koefisien Advertising yang bernilai positif menunjukkan bahwa peningkatan Advertising cenderung diikuti oleh peningkatan Sales. Selain itu, nilai $R^2 = 0.9596$ menunjukkan bahwa sebesar $95.96%$ keragaman Sales dapat dijelaskan oleh Advertising.
+
+Hasil uji Durbin-Watson pada model awal menunjukkan adanya autokorelasi yang kuat dengan nilai $DW = 0.16204$ dan p-value kurang dari $2.2 \times 10^{-16}$. Oleh karena itu, dilakukan penanganan menggunakan metode Cochrane-Orcutt dan Hildreth-Lu.
+
+Setelah penanganan, nilai SSE dan MSE mengalami penurunan yang cukup besar. Uji Durbin-Watson pada kedua model hasil penanganan juga menunjukkan p-value lebih besar dari $\alpha = 0.05$, sehingga belum terdapat bukti adanya autokorelasi. Dengan demikian, kedua metode tersebut mampu memperbaiki model regresi awal dalam menangani permasalahan autokorelasi.
+
+# Perbandingan Kedua Kasus
+
+```{r}
+perbandingan <- data.frame(
+  Data = c(
+    "Market Share vs Price",
+    "Sales vs Advertising"
+  ),
+  Arah_Hubungan = c(
+    ifelse(coef(model1)[2] > 0, "Positif", "Negatif"),
+    ifelse(coef(model2)[2] > 0, "Positif", "Negatif")
+  ),
+  Korelasi = c(
+    cor(dt1$Price, dt1$Market_Share),
+    cor(dt2$Advertising, dt2$Sales)
+  ),
+  DW_Awal = c(
+    dwtest(model1)$statistic,
+    dwtest(model2)$statistic
+  )
+)
+
+perbandingan
+```
+
+Berdasarkan hasil analisis, Market Share dan Price memiliki hubungan negatif yang sangat kuat dengan nilai korelasi sebesar $-0.9752564$, sedangkan Sales dan Advertising memiliki hubungan positif yang sangat kuat dengan nilai korelasi sebesar $0.9795849$.
+
+Pada kedua kasus ditemukan permasalahan autokorelasi pada model awal. Hal tersebut ditunjukkan oleh hasil uji Durbin-Watson yang memberikan nilai p-value lebih kecil dari $\alpha = 0.05$. Oleh karena itu, dilakukan penanganan menggunakan metode Cochrane-Orcutt dan Hildreth-Lu.
+
+Untuk Market Share dan Price, nilai SSE turun dari $3.308257$ pada model awal menjadi $2.659368$ setelah penanganan. Sementara itu, pada Sales dan Advertising, SSE turun dari $10.554532$ menjadi sekitar $1.291225$ setelah menggunakan Cochrane-Orcutt maupun Hildreth-Lu. Dengan demikian, kedua metode mampu mengurangi tingkat kesalahan model sekaligus mengatasi permasalahan autokorelasi yang ditemukan pada model awal.
+
+## Simpulan Umum
+
+Berdasarkan keseluruhan analisis, regresi linear dapat digunakan untuk menggambarkan hubungan antara peubah respon dan peubah prediktor pada kedua kasus. Pada Market Share dan Price, hubungan yang diperoleh bersifat negatif, sedangkan pada Sales dan Advertising hubungan yang terbentuk bersifat positif.
+
+Model awal pada kedua data mengalami permasalahan autokorelasi sehingga diperlukan penanganan menggunakan metode Cochrane-Orcutt dan Hildreth-Lu. Setelah dilakukan penanganan, nilai SSE dan MSE menjadi lebih kecil dibandingkan model awal, serta hasil uji Durbin-Watson menunjukkan bahwa belum terdapat bukti autokorelasi pada taraf nyata $5%$.
+
+Dengan demikian, penerapan metode Cochrane-Orcutt dan Hildreth-Lu dapat memperbaiki model regresi yang sebelumnya mengalami permasalahan autokorelasi. Kedua metode memberikan hasil yang relatif serupa dalam menangani autokorelasi pada kedua kasus.
