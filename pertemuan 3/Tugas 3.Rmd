@@ -68,7 +68,7 @@ pre code {
 <span class="no-highlight">**Putri Dwi Suci Sri Mulyaningsih Sitanggang** (M0401241033)</span>
 
 
-## *Packages*
+# *Packages*
 
 ```{r}
 #PACKAGES
@@ -81,7 +81,7 @@ library(MLmetrics)
 library(lmtest)
 library(car)
 ```
-
+# Kasus 1
 ## Impor Data
 
 ```{r}
@@ -311,7 +311,7 @@ data.frame("q_optimum" = q_opt, "p_optimum" = p_opt,
            "AIC"=model.ardl.opt$min.Stat)
 ```
 
-Dari tabel di atas, dapat terlihat bahwa nilai AIC terendah didapat ketika $p=6$ dan $q=1$, yaitu sebesar `-34.02031	`. Artinya, model autoregressive optimum didapat ketika $p=4$ dan $q=5$.
+Dari tabel di atas, dapat terlihat bahwa nilai AIC terendah didapat ketika $p=4$ dan $q=5$, yaitu sebesar `-34.02031	`. Artinya, model autoregressive optimum didapat ketika $p=4$ dan $q=5$.
 
 Selanjutnya dapat dilakukan pemodelan dengan nilai $p$ dan $q$ optimum seperti inisialisasi di langkah sebelumnya.
 
@@ -467,101 +467,281 @@ legend("topleft",
        c("Aktual", "Koyck","DLM 1","DLM 2", "Autoregressive"),
        lty=1, col=c("black","red","blue","orange","green"), cex=0.8)
 ```
+Berdasarkan plot perbandingan, terlihat bahwa sebagian besar model mampu menangkap tren penurunan market share seiring berjalannya peningkatan price, meskipun dengan tingkat kedekatan yang berbeda. Model DLM 1 (biru) dan Autoregressive (hijau) memiliki pola pergerakan yang sangat berimpit satu sama lain dan berada sedikit di bawah garis aktual. Model DLM 2 (oranye) menunjukkan perubahan titik yang cukup dinamis di sekitar nilai tengah, sedangkan Model Koyck (merah) relatif lebih stabil dan cenderung paling mendekati pola data aktual (hitam) pada beberapa titik nilai price yang lebih tinggi.
 
-Berdasarkan plot perbandingan, terlihat bahwa semua model mampu mengikuti tren data aktual, meskipun dengan tingkat kedekatan yang berbeda. Model DLM 1 (biru) dan Autoregressive (hijau) cukup konsisten mendekati data aktual, sementara DLM 2 (oranye) tampak menyimpang pada awal periode sebelum kembali mendekati tren. Model Koyck (merah) terlihat paling mendekati garis data aktual secara keseluruhan.
-
-## Pengayaan (Regresi Berganda)
-
-### Data
+# Kasus 2
+## Impor Data
 
 ```{r}
-data(M1Germany)
-data1 = M1Germany[1:144,]
-data1
+data2 <- read.csv("C:/Users/user/Downloads/sales_advertising_data.csv")
+str(data2)
+data2
 ```
 
-### DLM
+
+## Pembagian Data
 
 ```{r}
-#Run the search over finite DLMs according to AIC values
-finiteDLMauto(formula = logprice ~ interest+logm1,
-              data = data.frame(data1), 
-              q.min = 1, q.max = 5,
-              model.type = "dlm", 
-              error.type = "AIC", trace = FALSE)
+#SPLIT DATA
+train<-data2[1:32,]
+test<-data2[33:40,]
 ```
-
-Fungsi akan mencoba model dengan lag minimal q=1 hingga maksimal q=5. Dari hasil, model terbaik yang ditemukan menggunakan lag q=5 dengan nilai AIC = -463.1393.
 
 ```{r}
-# Model dengan q = 5 (lag sampai periode ke 5)
-model.dlmberganda = dlm(formula = logprice ~ interest + logm1,
-                        data = data.frame(data1), q = 5)
-summary(model.dlmberganda)
-
-# Model dengan q = 1 (lag sampai periode ke-1)
-model.dlmberganda2 = dlm(formula = logprice ~ interest + logm1,
-                         data = data.frame(data1), q = 1)
-summary(model.dlmberganda2)
+#data time series
+train.ts<-ts(train)
+test.ts<-ts(test)
+data.ts<-ts(data2)
 ```
 
-### ARDL(p,q)
+## Model Autoregressive
 
-#### Contoh: ARDL(2,3)
+Peubah dependen dipengaruhi oleh peubah independen pada waktu sekarang, serta dipengaruhi juga oleh peubah dependen itu sendiri pada satu waktu yang lalu maka model tersebut disebut *autoregressive* (Gujarati 2004).
 
-Untuk p = 2 dan q = 3, persamaannya adalah:
+### Pemodelan
+
+Pemodelan Autoregressive dilakukan menggunakan fungsi `dLagM::ardlDlm()` . Fungsi tersebut akan menerapkan *autoregressive* berordo $(p,q)$ dengan satu prediktor. Fungsi umum dari `ardlDlm()` adalah sebagai berikut.
+
+```{r, eval=FALSE}
+ardlDlm(formula = NULL , data = NULL , x = NULL , y = NULL , p = 1 , q = 1 , 
+         remove = NULL )
+```
+
+Dengan $p$ adalah integer yang mewakili panjang *lag* yang terbatas dan $q$ adalah integer yang merepresentasikan ordo dari proses *autoregressive*.
+
+```{r}
+model.ardl <- ardlDlm(x = train$Advertising, y = train$Sales, p = 1 , q = 1)
+summary(model.ardl)
+AIC(model.ardl)
+BIC(model.ardl)
+```
+
+```{r}
+model.ardl <- ardlDlm(formula = Sales ~ Advertising, 
+                         data = train,p = 1 , q = 1)
+summary(model.ardl)
+AIC(model.ardl)
+BIC(model.ardl)
+```
+
+
+Hasil di atas menunjukkan bahwa selain peubah $y_{t-1}$, hasil uji t menunjukkan nilai-p pada peubah $\ge0.05$ Hal ini menunjukkan bahwa peubah $y_{t-1}$ berpengaruh signifikan terhadap $y_t$, sementara $x_{t}$ dan $x_{t-1}$ tidak berpengaruh signifikan terhadap $y_t$. Model keseluruhannya adalah sebagai berikut:
 
 $$
-Y_t = \alpha + \phi_1 Y_{t-1} + \phi_2 Y_{t-2} +
-       \beta_0 X_t + \beta_1 X_{t-1} + \beta_2 X_{t-2} + \beta_3 X_{t-3} + \varepsilon_t
+\hat{Y}=1.30304 -0.30844 X_t-0.20644 X_{t-1}+0.83951Y_{t-1}
 $$
 
--   **p** = orde lag untuk variabel dependen (Y).
--   **q** = orde lag untuk variabel independen (X).
+### Peramalan dan Akurasi
 
 ```{r}
-#Mencari orde lag optimum model ARDL
-ardlBoundOrders(data = data1 , formula = logprice ~ interest + logm1,
-                ic="AIC")
-
+fore.ardl <- forecast(model = model.ardl, x=test$Advertising, h=8)
+fore.ardl
 ```
 
-berdasarkan tabel 3, kombinasi terbaik adalah p = 1 &q=4
+Data di atas merupakan hasil peramalan untuk 5 periode ke depan menggunakan Model Autoregressive dengan $p=1$ dan $q=1$.
 
 ```{r}
-model.ardlDlmberganda = ardlDlm(formula = logprice ~ interest + logm1,
-                        data = data.frame(data1) , p = 4 , q = 1)
-#Untuk fungsi ardlDlm() → notasinya terbalik.
-#p = lag X & q = lag Y
-summary(model.ardlDlmberganda)
+mape.ardl <- MAPE(fore.ardl$forecasts, test$Sales)
+mape.ardl
+#akurasi data training
+GoF(model.ardl)
 ```
+Berdasarkan akurasi di atas, terlihat bahwa nilai MAPE keduanya tidak jauh berbeda ($0.01905123$ & $0.008225628$. Artinya, model regresi dengan distribusi lag ini tidak `overfitted` atau `underfitted`
+
+### *Lag* Optimum
 
 ```{r}
-#model p interest 0 p logm1 4 
-rem.p = list(interest = c(1,2,3,4))
-remove = list(p = rem.p)
-model.ardlDlmberganda2 = ardlDlm(formula = logprice ~ interest + logm1,
-                        data = data.frame(data1) , p = 4 , q = 1 ,
-                        remove = remove)
-summary(model.ardlDlmberganda2)
+#penentuan lag optimum
+model.ardl.opt <- ardlBoundOrders(data = data.frame(data2), ic = "AIC", 
+                                  formula = Sales ~ Advertising )
+model.ardl.opt
+min_p=c()
+for(i in 1:15){
+  min_p[i]=min(model.ardl.opt$Stat.table[[i]])
+}
+q_opt=which(min_p==min(min_p, na.rm = TRUE))
+p_opt=which(model.ardl.opt$Stat.table[[q_opt]] == 
+              min(model.ardl.opt$Stat.table[[q_opt]], na.rm = TRUE))
+data.frame("q_optimum" = q_opt, "p_optimum" = p_opt, 
+           "AIC"=model.ardl.opt$min.Stat)
 ```
 
-Proses selanjutnya sama dengan pemodelan menggunakan peubah tunggal.
+Dari tabel di atas, dapat terlihat bahwa nilai AIC terendah didapat ketika $p=15$ dan $q=2$, yaitu sebesar `-305.755	`. Artinya, model autoregressive optimum didapat ketika $p=15$ dan $q=2$.
 
-## Tugas Individu
+Selanjutnya dapat dilakukan pemodelan dengan nilai $p$ dan $q$ optimum seperti inisialisasi di langkah sebelumnya.
 
-intruksi tugas
+## Pemodelan DLM & ARDL dengan Library `dynlm`
 
-1.  Gunakan dataset kualitas udara yg ada di github : 
+Pemodelan regresi dengan peubah *lag* tidak hanya dapat dilakukan dengan fungsi pada *packages* `dLagM` , tetapi terdapat *packages* `dynlm` yang dapat digunakan. Fungsi `dynlm` secara umum adalah sebagai berikut.
 
-2.  Tetapkan AQI sebagai variabel dependen (Y), lalu pilih satu variabel polutan (CO, NO₂, O₃, PM10, PM2.5, atau SO₂) sebagai variabel independen (X).
+```{r, eval=FALSE}
+dynlm(formula, data2, subset, weights, na.action, method = "qr",
+  model = TRUE, x = FALSE, y = FALSE, qr = TRUE, singular.ok = TRUE,
+  contrasts = NULL, offset, start = NULL, end = NULL, ...)
+```
 
-3.  Terapkan metode regresi dengan peubah lag yang sudah dipelajari
+Untuk menentukan `formula` model yang akan digunakan, tersedia fungsi tambahan yang memungkinkan spesifikasi dinamika (melalui `d()` dan `L()`) atau pola linier/siklus dengan mudah (melalui `trend()`, `season()`, dan `harmon()`). Semua fungsi formula baru mengharuskan argumennya berupa objek deret waktu (yaitu, `"ts"` atau `"zoo"`).
 
-4.  Bandingkan kinerja model, kemudian tentukan model terbaik menggunakan metrik akurasi.
+`L()` : fungsi untuk mengambil nilai lag dari suatu variabel.
 
-5.  Upload data dan tugas per individu ke GitHub pada folder Pertemuan-3 dengan format HTML bernama: Tugas-Pertemuan-3.html dan rmd
+`L(Xt)`= Xt pada periode sebelumnya (lag ke-1).
 
+`L(Xt, 2)` = Xt pada dua periode sebelumnya (lag ke-2).
+
+```{r}
+# Load library dynlm
+library(dynlm)
+
+# Sama dengan model DLM q = 1
+cons_lm1 <- dynlm(Sales ~ Advertising + L(Advertising), data = train.ts)
+
+# Sama dengan model ARDL p = 1, q = 0
+cons_lm2 <- dynlm(Sales ~ Advertising + L(Sales), data = train.ts)
+
+# Sama dengan model ARDL p = 1, q = 1
+cons_lm3 <- dynlm(Sales ~ Advertising + L(Advertising) + L(Sales), data = train.ts)
+
+# Sama dengan model DLM q = 2
+cons_lm4 <- dynlm(Sales ~ Advertising + L(Advertising) + L(Advertising, 2), data = train.ts)
+```
+
+### Ringkasan Model
+
+Berikut adalah ringkasan hasil estimasi dari masing-masing model:
+
+```{r}
+summary(cons_lm1)
+summary(cons_lm2)
+summary(cons_lm3)
+summary(cons_lm4)
+```
+
+
+### SSE
+
+Selain ringkasan hasil, kita juga bisa menghitung nilai SSE dari masing-masing model.
+
+```{r}
+deviance(cons_lm1)
+deviance(cons_lm2)
+deviance(cons_lm3)
+deviance(cons_lm4)
+```
+
+Semakin kecil nilai SSE, berarti model lebih baik dalam menyesuaikan data (karena error lebih kecil).
+
+### Ui encomptest
+
+langkah selanjutnya adalah membandingkan kinerja antar model. selanjutnya adalah membandingkan kinerja antar model. Salah satu pendekatan yang dapat digunakan adalah encompassing test dengan fungsi `encomptest()` dari package `lmtest`.
+
+```{r}
+#uji model
+if(require("lmtest")) encomptest(cons_lm1, cons_lm2)
 
 ```
 
+-   Model 1 : p-value 0.5.199e-09 (\< 0.05). Artinya, penambahan lag dari Y (`L(Yt)`) memberikan peningkatan signifikan.\
+    Dengan demikian, Model 1 belum memadai.
+-   Model 2 : p-value 0.2453 (\> 0.05). Artinya, penambahan lag dari Y (`L(Yt)`) tidak memberikan peningkatan signifikan.\
+    Dengan demikian, Model 2 sudah memadai.
+
+#### Uji Autokorelasi Residual
+
+```{r}
+#durbin watson
+dwtest(cons_lm1)
+dwtest(cons_lm2)
+dwtest(cons_lm3)
+dwtest(cons_lm4)
+```
+
+
+#### Uji Heterogenitas
+
+```{r}
+bptest(cons_lm1)
+bptest(cons_lm2)
+bptest(cons_lm3)
+bptest(cons_lm4)
+```
+
+-   Jika p-value \> 0.05 → tidak ada heteroskedastisitas
+
+<!-- -->
+
+-    Jika p-value ≤ 0.05 → ada heteroskedastisitas.
+
+#### Uji Normalitas
+
+H0: Residual berdistribusi normal.
+
+H1: Residual tidak berdistribusi normal.
+
+```{r}
+shapiro.test(residuals(cons_lm1))
+shapiro.test(residuals(cons_lm2))
+shapiro.test(residuals(cons_lm3))
+shapiro.test(residuals(cons_lm4))
+```
+
+-   Jika p-value \> 0.05 → gagal tolak H0 → residual normal.
+
+<!-- -->
+
+-    Jika p-value ≤ 0.05 → tolak H0 → residual tidak normal.
+
+## Perbandingan Model
+
+Membuat tabel ringkas akurasi model berdasarkan nilai MAPE (Mean Absolute Percentage Error).
+
+```{r}
+akurasi <- matrix(c(mape.koyck, mape.dlm, mape.dlm2, mape.ardl))
+row.names(akurasi)<- c("Koyck","DLM 1","DLM 2","Autoregressive")
+colnames(akurasi) <- c("MAPE")
+akurasi
+```
+
+
+Berdasarkan nilai MAPE, model paling optimum didapat pada Model Autoregressive karena memiliki nilai MAPE yang terkecil.
+
+### Plot
+
+Untuk membandingkan hasil peramalan dari berbagai model (Koyck, DLM 1, DLM 2, dan ARDL) dengan data aktual, dibuat grafik garis. Visualisasi ini membantu melihat seberapa dekat hasil ramalan tiap model dengan nilai aktual.
+
+```{r}
+par(mfrow=c(1,1))  # atur layout grafik tunggal
+
+# 1. Ambil panjang data yang paling kecil di antara semua model
+min_len <- min(
+  length(test$Advertising),
+  length(fore.koyck$forecasts),
+  length(fore.dlm$forecasts),
+  length(fore.dlm2$forecasts),
+  length(fore.ardl$forecasts)
+)
+
+# 2. Samakan semua panjang vektor data dari belakang
+x_plot <- tail(test$Advertising, min_len)
+y_plot <- tail(test$Sales, min_len)
+
+y_koyck <- tail(fore.koyck$forecasts, min_len)
+y_dlm   <- tail(fore.dlm$forecasts, min_len)
+y_dlm2  <- tail(fore.dlm2$forecasts, min_len)
+y_ardl  <- tail(fore.ardl$forecasts, min_len)
+
+# 3. Plot data aktual
+plot(x_plot, y_plot, type="b", col="black", ylim=c(8, 25),
+     xlab="Advertising", ylab="Sales", main="Perbandingan Model Peramalan")
+
+# 4. Tambahkan garis ramalan dari masing-masing model
+points(x_plot, y_koyck, col="red");    lines(x_plot, y_koyck, col="red")
+points(x_plot, y_dlm,   col="blue");   lines(x_plot, y_dlm,   col="blue")
+points(x_plot, y_dlm2,  col="orange"); lines(x_plot, y_dlm2,  col="orange")
+points(x_plot, y_ardl,  col="green");  lines(x_plot, y_ardl,  col="green")
+
+# 5. Legenda model
+legend("topleft",
+       c("Aktual", "Koyck", "DLM 1", "DLM 2", "Autoregressive"),
+       lty=1, col=c("black", "red", "blue", "orange", "green"), cex=0.8)
+```
+Berdasarkan plot perbandingan, terlihat bahwa sebagian besar model belum mampu menangkap tren kenaikan penjualan secara presisi seiring dengan meningkatnya biaya iklan, meskipun dengan tingkat kedekatan yang berbeda. Model Koyck (merah), DLM 1 (biru), dan DLM 2 (oranye) berada jauh di bawah garis aktual sehingga cenderung menghasilkan prediksi yang sangat underestimate. Sementara itu, Model Autoregressive (hijau) menunjukkan pergerakan yang sangat stabil dan paling mendekati pola serta posisi garis data aktual (hitam) dari awal hingga akhir periode
