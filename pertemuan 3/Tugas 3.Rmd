@@ -709,9 +709,7 @@ Berdasarkan nilai MAPE, model paling optimum didapat pada Model Autoregressive k
 Untuk membandingkan hasil peramalan dari berbagai model (Koyck, DLM 1, DLM 2, dan ARDL) dengan data aktual, dibuat grafik garis. Visualisasi ini membantu melihat seberapa dekat hasil ramalan tiap model dengan nilai aktual.
 
 ```{r}
-par(mfrow=c(1,1))  # atur layout grafik tunggal
-
-# 1. Ambil panjang data yang paling kecil di antara semua model
+par(mfrow=c(1,1)) 
 min_len <- min(
   length(test$Advertising),
   length(fore.koyck$forecasts),
@@ -720,7 +718,6 @@ min_len <- min(
   length(fore.ardl$forecasts)
 )
 
-# 2. Samakan semua panjang vektor data dari belakang
 x_plot <- tail(test$Advertising, min_len)
 y_plot <- tail(test$Sales, min_len)
 
@@ -729,17 +726,15 @@ y_dlm   <- tail(fore.dlm$forecasts, min_len)
 y_dlm2  <- tail(fore.dlm2$forecasts, min_len)
 y_ardl  <- tail(fore.ardl$forecasts, min_len)
 
-# 3. Plot data aktual
+
 plot(x_plot, y_plot, type="b", col="black", ylim=c(8, 25),
      xlab="Advertising", ylab="Sales", main="Perbandingan Model Peramalan")
 
-# 4. Tambahkan garis ramalan dari masing-masing model
 points(x_plot, y_koyck, col="red");    lines(x_plot, y_koyck, col="red")
 points(x_plot, y_dlm,   col="blue");   lines(x_plot, y_dlm,   col="blue")
 points(x_plot, y_dlm2,  col="orange"); lines(x_plot, y_dlm2,  col="orange")
 points(x_plot, y_ardl,  col="green");  lines(x_plot, y_ardl,  col="green")
 
-# 5. Legenda model
 legend("topleft",
        c("Aktual", "Koyck", "DLM 1", "DLM 2", "Autoregressive"),
        lty=1, col=c("black", "red", "blue", "orange", "green"), cex=0.8)
