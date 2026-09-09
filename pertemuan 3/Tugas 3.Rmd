@@ -1,11 +1,51 @@
-
 ---
 title: "Tugas 3"
-author: "Putri Dwi"
-date: "2026-09-03"
-output: html_document
+date: "9 September 2026"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 3
+    theme: cosmo
+    highlight: tango
+    number_sections: true
+    df_print: paged
 ---
 
+<style>
+/* 1. Kotak Utama Daftar Isi (TOC) */
+#TOC {
+  background-color: #fff0f5 !important; /* Warna pink pastel lembut */
+  border: 2px solid #ffb6c1 !important; /* Bingkai pink */
+  border-radius: 12px !important;       /* Sudut melengkung halus */
+  padding: 10px !important;
+  box-shadow: 2px 4px 10px rgba(255, 182, 193, 0.3) !important; /* Efek bayangan pink */
+}
+
+/* 2. Warna Teks & Font Daftar Isi */
+#TOC a {
+  color: #db7093 !important;            /* Warna font pink tua/dusty pink */
+  font-family: 'Comic Sans MS', 'Quicksand', sans-serif !important; /* Font imut */
+  font-weight: 500 !important;
+}
+
+/* 3. Efek pas kursor diarahin (Hover) */
+#TOC a:hover {
+  color: #ff1493 !important;            /* Pink lebih cerah */
+  background-color: #ffe4e1 !important; /* Sorotan latar lembut */
+  border-radius: 6px !important;
+}
+
+/* 4. Tampilan Menu yang Lagi Aktif (Selected Item) */
+#TOC .active {
+  background-color: #ff69b4 !important; /* Latar pink terang pas aktif */
+  color: white !important;               /* Teks berubah jadi putih */
+  border-radius: 8px !important;
+  font-weight: bold !important;
+}
+</style>
 
 <style>
 
