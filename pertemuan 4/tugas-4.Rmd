@@ -159,10 +159,10 @@ ma2[1] <- wn[1]
 ma2[2] <- wn[2] + 0.4 * wn[1]
 ```
 
-Nilai-nilai selanjutnya dapat dicari melalui *loop*. Bentuk loop dapat dilihat dari rumus MA(1) yang hendak dibangkitkan:
+Nilai-nilai selanjutnya dapat dicari melalui *loop*. Bentuk loop dapat dilihat dari rumus MA(2) yang hendak dibangkitkan:
 
 $$
-y_t = e_t+0.5e_{t-1}
+y_t = e_t+0.4e_{t-1}+0.6e_{t-2}
 $$
 
 ```{r}
@@ -173,7 +173,7 @@ for(i in 3:300){
 ma2
 ```
 
-Selain menggunakan cara di atas, pembangkitan proses MA(1) dapat dilakukan dengan fungsi `arima.sim()` sebagai berikut.
+Selain menggunakan cara di atas, pembangkitan proses MA(2) dapat dilakukan dengan fungsi `arima.sim()` sebagai berikut.
 
 ```{r}
 ma2_sim <- arima.sim(
@@ -192,7 +192,7 @@ ma2_sim
 ts.plot(ma2)
 ```
 
-Berdasarkan plot time series, terlihat bahwa data MA(1) yang dibangkitkan stasioner dalam rataan
+Berdasarkan plot time series, terlihat bahwa data MA(2) yang dibangkitkan stasioner dalam rataan
 
 ### Plot ACF
 
@@ -200,7 +200,7 @@ Berdasarkan plot time series, terlihat bahwa data MA(1) yang dibangkitkan stasio
 acf(ma2,lag.max = 20)
 ```
 
-Berdasarkan plot ACF tersebut, terlihat bahwa plot ACF *cuts off* di lag pertama
+Berdasarkan plot ACF tersebut, terlihat bahwa plot ACF *cuts off* di lag kedua
 
 ### Plot PACF
 
@@ -245,7 +245,7 @@ cor(yt_ma2_lag1, yt_1_ma2)
 Korelasi antara $Y_t$ dengan $Y_{t-1}$ dari hasil simulasi mendekati perhitungan teoritis yaitu
 
 $$
-\rho_1=\frac{-\theta}{1+(-\theta)^2}=\frac{-(-0.5)}{1+(-0.5)^2}=0.4
+\rho_1=\frac{\theta}{1+(-\theta)^2}=\frac{-(-0.5)}{1+(-0.5)^2}=0.4
 $$
 
 #### Korelasi antara $Y_t$ dengan $Y_{t-2}$
