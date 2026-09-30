@@ -1,1 +1,412 @@
+---
+title: "Tugas 5"
+date: "24 September 2026"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 3
+    theme: cosmo
+    highlight: tango
+    number_sections: true
+    df_print: paged
+---
+
+<style>
+/* 1. Kotak Utama Daftar Isi (TOC) */
+#TOC {
+  background-color: #fff0f5 !important; /* Warna pink pastel lembut */
+  border: 2px solid #ffb6c1 !important; /* Bingkai pink */
+  border-radius: 12px !important;       /* Sudut melengkung halus */
+  padding: 10px !important;
+  box-shadow: 2px 4px 10px rgba(255, 182, 193, 0.3) !important; /* Efek bayangan pink */
+}
+
+/* 2. Warna Teks & Font Daftar Isi */
+#TOC a {
+  color: #db7093 !important;            /* Warna font pink tua/dusty pink */
+  font-family: 'Comic Sans MS', 'Quicksand', sans-serif !important; /* Font imut */
+  font-weight: 500 !important;
+}
+
+/* 3. Efek pas kursor diarahin (Hover) */
+#TOC a:hover {
+  color: #ff1493 !important;            /* Pink lebih cerah */
+  background-color: #ffe4e1 !important; /* Sorotan latar lembut */
+  border-radius: 6px !important;
+}
+
+/* 4. Tampilan Menu yang Lagi Aktif (Selected Item) */
+#TOC .active {
+  background-color: #ff69b4 !important; /* Latar pink terang pas aktif */
+  color: white !important;               /* Teks berubah jadi putih */
+  border-radius: 8px !important;
+  font-weight: bold !important;
+}
+</style>
+
+<style>
+
+body {
+  background-color: #F7E9D7 !important;
+  font-family: "Poppins", sans-serif;
+  color: #333333;
+  padding: 40px;
+}
+
+
+
+h1, .title, .author-name, .fa, .fas, .no-highlight {
+  color: #4ECDC4 !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+
+
+h2, h3, .section-title {
+  color: #FF6B2B !important;
+  font-weight: 800;
+  border-bottom: 3px solid #FF9E7C;
+  margin-top: 30px;
+}
+
+
+
+pre, blockquote, .chunk-output {
+  background-color: #F7B6B6 !important;
+  border-radius: 15px;
+  padding: 20px;
+  border: none;
+  box-shadow: 8px 8px 0px rgba(255, 158, 124, 0.25);
+}
+
+strong:not(.no-highlight), 
+b:not(.no-highlight), 
+code, 
+mark {
+  background-color: #FFE066 !important;
+  color: #5d4037 !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+
+pre code {
+  background-color: transparent !important;
+  color: #3D405B !important;
+}
+
+</style>
+
+`r fontawesome::fa("user", fill = "#3498db")` 
+<span class="no-highlight">**Putri Dwi Suci Sri Mulyaningsih Sitanggang** (M0401241033)</span>
+
+# Packages
+
+```{r}
+library(ggplot2)
+library(tsibble)
+library(tseries)
+library(MASS)
+library(forecast)
+library(TSA)
+library(TTR)
+library(aTSA)
+library(graphics)
+```
+
+# Data Real
+Digunakan data ISPU PM10 (stasiun DKI1 Bunderan HI) sebanyak 112 periode harian (10 Agustus 2021 s.d. 29 November 2021). Seluruh data digunakan karena jumlahnya memang hanya 112 observasi.
+
+```{r}
+dataispu <-read.csv ("C:/Users/user/AppData/Local/Packages/5319275A.WhatsAppDesktop_cv1g1gvanyjgm/LocalState/sessions/AFB6ADC4046BEDC8C5923D4D10C2526D309EBE98/transfers/2026-34/ispu_anggota_4.csv")
+dataispu <- dataispu[, c("tanggal","pm10")]
+str(dataispu)
+dataispu.ts <- ts(dataispu$pm10)
+n   <- length(dataispu.ts); n
+ntr <- round(0.86 * n); ntr      # 96 data latih, 16 data uji
+```
+
+## Eksplorasi Data
+### Plot Data Penuh
+```{r}
+plot.ts(dataispu.ts, lty = 1, xlab = "Waktu", ylab = "PM10", main = "Plot Data ISPU PM10")
+```
+
+Berdasarkan plot data deret waktu, PM10 berfluktuasi di sekitar 50-65 pada sekitar 70 periode pertama, kemudian turun tajam dan bergerak di kisaran 20-40 pada periode akhir. Pola ini menunjukkan adanya pergeseran nilai tengah (tidak ada trend naik yang konsisten seperti data kurs). Pembagian data latih dan data uji ditetapkan dengan proporsi 86%:14% (96 data latih dan 16 data uji).
+
+### Plot Data Latih
+```{r}
+ispu.train <- dataispu$pm10[1:ntr]
+train.ts <- ts(ispu.train)
+plot.ts(train.ts, lty = 1, xlab = "waktu", ylab = "PM10", main = "Plot PM10 Train")
+```
+
+Berdasarkan plot data latih, nilai PM10 bergerak naik pada awal periode (mencapai puncak 79 sekitar periode ke-21), lalu cenderung menurun secara bertahap. Data tidak bergerak pada satu nilai tengah yang tetap sehingga secara eksploratif data diduga tidak stasioner dalam rataan.
+
+### Plot Data Uji
+```{r}
+ispu.test <- dataispu$pm10[(ntr+1):n]
+test.ts <- ts(ispu.test)
+plot.ts(test.ts, lty = 1, xlab = "waktu", ylab = "PM10", main = "Plot PM10 Test")
+```
+
+Data uji (14-29 November 2021) berada pada level yang rendah (19-55) dan cenderung menurun, lebih rendah dibanding rata-rata data latih (sekitar 54).
+
+## Uji Stasioneritas Data
+### Plot ACF
+```{r}
+acf(train.ts)
+```
+
+Plot ACF data latih bernilai 0.49 pada lag 1, 0.25 pada lag 2, lalu menurun dan masuk ke dalam batas kepercayaan mulai lag 3-4. Penurunannya relatif cepat, sehingga plot ACF sendiri tidak menunjukkan pola *tails off slowly* yang kuat. Namun dengan mempertimbangkan pergeseran nilai tengah pada plot deret waktu, data tetap diperlakukan sebagai belum stasioner dalam rataan dan ditangani dengan differencing.
+
+### Uji ADF
+```{r}
+tseries::adf.test(train.ts)
+```
+
+$H_0$ : Data tidak stasioner dalam rataan
+
+$H_1$ : Data stasioner dalam rataan
+
+Uji ADF menghasilkan Dickey-Fuller = -3.6538, lag order = 4, dan p-value = 0.03238. Nilai ini lebih kecil dari taraf nyata 5% sehingga tolak $H_0$, artinya secara formal data sudah stasioner dalam rataan, tetapi hanya tipis di bawah 0.05. Hasil ini agak berbeda dengan eksplorasi plot deret waktu yang menunjukkan pergeseran nilai tengah. Karena hasilnya borderline, pada analisis ini tetap dilakukan differencing agar sesuai alur pada data kurs (lihat catatan di bagian akhir).
+
+### Plot Box-Cox
+```{r}
+index <- seq(1:ntr)
+bc <- boxcox(train.ts ~ index, lambda = seq(0.5, 2, by = 0.1))
+lambda_opt <- bc$x[which.max(bc$y)]
+lambda_opt
+ci_lambda <- bc$x[bc$y > max(bc$y) - 0.5 * qchisq(0.95, df = 1)]
+c(Batas_Bawah = min(ci_lambda), Batas_Atas = max(ci_lambda))
+```
+
+Lambda optimum sebesar 1.74 dengan selang kepercayaan 95% antara 0.91 sampai 2.00. Selang tersebut memuat nilai 1, sehingga data sudah stasioner dalam ragam dan tidak diperlukan transformasi.
+
+## Penanganan Ketidakstasioneran Data
+```{r}
+train.diff <- diff(train.ts, differences = 1)
+plot.ts(train.diff, lty = 1, xlab = "waktu", ylab = "Data Difference 1 PM10", main = "Plot Difference PM10")
+```
+
+Setelah differencing pertama, data bergerak di sekitar nilai tengah nol tanpa trend, sehingga sudah stasioner dalam rataan.
+
+### Plot ACF
+```{r}
+acf(train.diff)
+```
+
+Plot ACF data hasil differencing hanya memiliki satu spike di lag 1 (sekitar -0.22, sedikit melewati batas), sedangkan lag berikutnya berada di dalam batas. ACF *cuts off* setelah lag 1 sehingga data sudah stasioner dalam rataan.
+
+### Uji ADF
+```{r}
+tseries::adf.test(train.diff)
+```
+
+$H_0$ : Data tidak stasioner dalam rataan
+
+$H_1$ : Data stasioner dalam rataan
+
+Uji ADF menghasilkan p-value = 0.01 (lebih kecil dari printed p-value) yang kurang dari 5% sehingga tolak $H_0$. Data hasil differencing stasioner dalam rataan dan dapat dilanjutkan ke pemodelan.
+
+```{r}
+index_diff <- seq(1:length(train.diff))
+min_val <- min(train.diff)
+if (min_val <= 0) {
+  c <- abs(min_val) + 1
+  train.diff_shifted <- train.diff + c
+} else {
+  train.diff_shifted <- train.diff
+}
+bc_diff <- boxcox(train.diff_shifted ~ index_diff, lambda = seq(0.5, 2, by = 0.1))
+lambda_opt_diff <- bc_diff$x[which.max(bc_diff$y)]
+print(paste("Lambda optimum setelah diff:", lambda_opt_diff))
+ci_lambda_diff <- bc_diff$x[bc_diff$y > max(bc_diff$y) - 0.5 * qchisq(0.95, df = 1)]
+c(Batas_Bawah = min(ci_lambda_diff), Batas_Atas = max(ci_lambda_diff))
+```
+
+Setelah differencing, lambda optimum = 0.924 dengan selang 95% antara 0.636 sampai 1.227 yang memuat 1, sehingga data juga sudah stasioner dalam ragam.
+
+## Identifikasi Model
+### Plot ACF
+```{r}
+acf(train.diff)
+```
+
+ACF *cuts off* pada lag ke-1, sehingga jika PACF dianggap *tails off*, model tentatifnya ARIMA(0,1,1).
+
+### Plot PACF
+```{r}
+pacf(train.diff)
+```
+
+PACF memiliki spike pada lag 1 (sekitar -0.22), dan lag 2 serta lag 4 berada di sekitar batas (-0.17 dan -0.19). Jika ACF dianggap *tails off*, model tentatifnya ARIMA(1,1,0). Jika keduanya dianggap *tails off*, modelnya ARIMA(1,1,1).
+
+### Plot EACF
+```{r}
+eacf(train.diff)
+```
+Identifikasi model menggunakan plot EACF dilakukan dengan melihat ujung segitiga pada pola segitiga nol. Berdasarkan output EACF, segitiga nol dimulai dari baris AR = 0 dan kolom MA = 1. Dalam hal ini model tentatif yang terbentuk adalah ARIMA(0,1,1), ARIMA(1,1,1), dan ARIMA(0,1,2). Selain itu ARIMA(2,1,0) dipertimbangkan berdasarkan lag 2 pada plot PACF yang mendekati batas.
+
+
+## Pendugaan Parameter Model Tentatif
+### ARIMA(0,1,1)
+```{r}
+model1.da = Arima(train.diff, order = c(0,0,1), method = "ML")
+summary(model1.da)   # AIC = 675.95
+lmtest::coeftest(model1.da)
+```
+Parameter MA(1) signifikan (p = 0.010), sedangkan intercept tidak signifikan (p = 0.992). Rata-rata data hasil differencing mendekati nol, artinya tidak ada drift.
+
+### ARIMA(1,1,0)
+```{r}
+model2.da = Arima(train.diff, order = c(1,0,0), method = "ML")
+summary(model2.da)   # AIC = 680.12
+lmtest::coeftest(model2.da)
+```
+Parameter AR(1) signifikan (p = 0.019), intercept tidak signifikan (p = 0.871).
+
+### ARIMA(1,1,1)
+```{r}
+model3.da = Arima(train.diff, order = c(1,0,1), method = "ML")
+summary(model3.da)   # AIC = 665.64
+lmtest::coeftest(model3.da)
+```
+AIC paling kecil (665.64), tetapi koefisien MA(1) = -1.000 berada tepat di batas invertibilitas. Ini tanda *over-differencing* dan model tidak layak dipakai. Intercept juga tidak signifikan (p = 0.148). Model ARIMA(1,1,1) dieliminasi.
+
+### ARIMA(0,1,2)
+```{r}
+model4.da = Arima(train.diff, order = c(0,0,2), method = "ML")
+summary(model4.da)   # AIC = 669.20
+lmtest::coeftest(model4.da)
+```
+Parameter MA(1) (p < 0.001) dan MA(2) (p = 0.006) signifikan, intercept tidak signifikan (p = 0.641).
+
+### ARIMA(2,1,0)
+```{r}
+model5.da = Arima(train.diff, order = c(2,0,0), method = "ML")
+summary(model5.da)   # AIC = 679.05
+lmtest::coeftest(model5.da)
+```
+Parameter AR(1) signifikan (p = 0.006), tetapi AR(2) tidak signifikan pada taraf 5% (p = 0.077), intercept tidak signifikan (p = 0.905).
+
+## Ringkasan AIC
+```{r}
+model_tentatif <- data.frame(
+  Model = c("ARIMA(0,1,1)","ARIMA(1,1,0)","ARIMA(1,1,1)","ARIMA(0,1,2)","ARIMA(2,1,0)"),
+  AIC   = c(AIC(model1.da), AIC(model2.da), AIC(model3.da), AIC(model4.da), AIC(model5.da)),
+  BIC   = c(BIC(model1.da), BIC(model2.da), BIC(model3.da), BIC(model4.da), BIC(model5.da))
+)
+model_tentatif
+```
+
+Nilai AIC terkecil dimiliki ARIMA(1,1,1), tetapi model ini tidak valid (MA(1) = -1). Di antara model yang layak, ARIMA(0,1,2) memiliki AIC terkecil (669.20) dan seluruh parameter AR/MA-nya signifikan, sehingga dipilih model **ARIMA(0,1,2)**. Intercept tidak signifikan pada semua model karena rata-rata differencing memang mendekati nol (tidak ada drift), sehingga tidak dijadikan syarat pemilihan.
+
+## Analisis Sisaan
+### Eksplorasi Sisaan
+```{r}
+sisaan.da <- model4.da$residuals
+par(mfrow = c(2,2), mar = c(4,4,2,1), oma = c(0,0,2,0))
+qqnorm(sisaan.da, main = "Normal Q-Q Plot"); qqline(sisaan.da, col = "blue", lwd = 2)
+plot(sisaan.da, type = "p", main = "Plot Sisaan vs Waktu", xlab = "Waktu", ylab = "Sisaan")
+acf(sisaan.da, main = "ACF Sisaan")
+pacf(sisaan.da, main = "PACF Sisaan")
+par(mfrow = c(1,1))
+```
+
+Pada Q-Q plot, sebagian besar titik mengikuti garis 45 derajat dengan sedikit penyimpangan di bagian ekor. Plot sisaan terhadap waktu menyebar acak di sekitar nol. Plot ACF dan PACF sisaan tidak memiliki spike signifikan pada lag-lag awal, sehingga sisaan secara visual dapat dianggap saling bebas.
+
+### Uji Formal
+#### Normalitas
+```{r}
+ks.test(sisaan.da, "pnorm", mean = mean(sisaan.da), sd = sd(sisaan.da))
+shapiro.test(sisaan.da)
+```
+$H_0$ : Sisaan menyebar normal ; $H_1$ : Sisaan tidak menyebar normal
+
+Uji Kolmogorov-Smirnov menghasilkan p-value = 0.386 (> 5%) sehingga gagal tolak $H_0$ dan sisaan menyebar normal. Uji Shapiro-Wilk memberi p-value = 0.026 (< 5%) yang mengindikasikan sedikit penyimpangan dari normal. Hasil kedua uji tidak sepenuhnya searah, tetapi karena penyimpangannya ringan dan Q-Q plot cukup mengikuti garis, asumsi normalitas dianggap terpenuhi secara hampiran.
+
+
+#### Kebebasan sisaan
+```{r}
+Box.test(sisaan.da, type = "Ljung")
+Box.test(sisaan.da, lag = 10, type = "Ljung")
+```
+$H_0$ : Sisaan saling bebas ; $H_1$ : Sisaan tidak saling bebas
+
+Uji Ljung-Box menghasilkan p-value = 0.479 (lag 1) dan 0.842 (lag 10), keduanya > 5% sehingga gagal tolak $H_0$. Sisaan saling bebas, sesuai dengan hasil eksplorasi.
+
+#### Kehomogenan ragam
+```{r}
+Box.test((sisaan.da)^2, type = "Ljung")
+```
+$H_0$ : Ragam sisaan homogen ; $H_1$ : Ragam sisaan tidak homogen
+
+p-value = 0.966 (> 5%) sehingga gagal tolak $H_0$. Ragam sisaan homogen (tidak ada efek ARCH).
+
+#### Nilai tengah sisaan sama dengan nol
+```{r}
+t.test(sisaan.da, mu = 0, conf.level = 0.95)
+```
+$H_0$ : nilai tengah sisaan sama dengan 0 ; $H_1$ : nilai tengah sisaan tidak sama dengan 0
+
+p-value = 0.540 (> 5%) sehingga gagal tolak $H_0$. Nilai tengah sisaan sama dengan nol (rata-rata sisaan 0.495, selang kepercayaan 95%: -1.10 sampai 2.09).
+
+## Overfitting
+Overfitting dilakukan dengan menaikkan orde model ARIMA(0,1,2) menjadi ARIMA(1,1,2) dan ARIMA(0,1,3).
+
+```{r}
+model6.da = Arima(train.diff, order = c(1,0,2), method = "ML")
+summary(model6.da)   # AIC = 667.62
+lmtest::coeftest(model6.da)
+
+model7.da = Arima(train.diff, order = c(0,0,3), method = "ML")
+summary(model7.da)   # AIC = 668.61
+lmtest::coeftest(model7.da)
+```
+
+Pada ARIMA(1,1,2), parameter MA(2) tidak signifikan (p = 0.875) dan MA(1) = -0.97 mendekati batas invertibilitas. Pada ARIMA(0,1,3), parameter MA(2) (p = 0.055) dan MA(3) (p = 0.107) tidak signifikan. Kedua model juga tidak memberi perbaikan AIC yang berarti dibanding ARIMA(0,1,2) (669.20). Maka model terbaik tetap **ARIMA(0,1,2)** dan dilanjutkan ke peramalan.
+
+## Model Terbaik : ARIMA(0,1,2)
+```{r}
+model_best = Arima(train.diff, order = c(0,0,2), method = "ML")
+summary(model_best)
+lmtest::coeftest(model_best)
+```
+
+Model yang terbentuk: $\hat{Z}_t = -0.0731 + e_t - 0.4789\,e_{t-1} - 0.3416\,e_{t-2}$ dengan $Z_t = Y_t - Y_{t-1}$.
+
+## Peramalan
+Peramalan dilakukan menggunakan fungsi `forecast()` untuk 16 hari ke depan (sepanjang data uji).
+
+```{r}
+ramalan.da <- forecast::forecast(model_best, h = length(test.ts))
+data.ramalan.da <- ramalan.da$mean
+plot(ramalan.da)
+
+# Inverse differencing
+pt_akhir_train <- tail(train.ts, 1)
+forecast <- diffinv(data.ramalan.da, differences = 1, xi = pt_akhir_train)
+hasil <- forecast[-1]     # elemen pertama = nilai terakhir data latih, dibuang
+
+perbandingan.da <- cbind(Aktual = test.ts, Forecast = hasil)
+print(head(perbandingan.da, 10))
+
+akurasi_test <- accuracy(hasil, test.ts)
+akurasi_test
+
+ts.plot(dataispu.ts, col = "black", lty = 1, xlab = "Waktu", ylab = "PM10")
+lines((ntr+1):(ntr+length(hasil)), hasil, col = "blue", lty = 2, lwd = 2)
+legend("topright", legend = c("Data Aktual", "Forecast"),
+       col = c("black", "blue"), lty = c(1,2), lwd = c(1,2), bty = "n")
+```
+
+Hasil perbandingan menunjukkan ramalan bernilai sekitar 50.5 di awal dan turun perlahan ke sekitar 45.6 di akhir, sedangkan data aktual turun tajam ke kisaran 19-30. Nilai akurasi pada data uji: ME = -13.69, RMSE = 17.21, MAE = 15.85, MAPE = 59.91%, dan Theil's U = 1.72. Model cenderung meramal terlalu tinggi (ME negatif) dan MAPE hampir 60% menunjukkan akurasi peramalan kurang baik. Setelah dua langkah ke depan, ramalan model MA(2) hanya bergerak mengikuti konstanta (drift -0.073), sehingga tidak mampu menangkap penurunan tajam PM10 pada akhir periode. Theil's U > 1 berarti model belum lebih baik dari peramalan nilai hari sebelumnya.
 
