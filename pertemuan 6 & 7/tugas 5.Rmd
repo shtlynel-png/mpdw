@@ -157,7 +157,6 @@ test.ts <- ts(ispu.test)
 plot.ts(test.ts, lty = 1, xlab = "waktu", ylab = "PM10", main = "Plot PM10 Test")
 ```
 
-Data uji (14-29 November 2021) berada pada level yang rendah (19-55) dan cenderung menurun, lebih rendah dibanding rata-rata data latih (sekitar 54).
 
 ## Uji Stasioneritas Data
 ### Plot ACF
@@ -176,7 +175,7 @@ $H_0$ : Data tidak stasioner dalam rataan
 
 $H_1$ : Data stasioner dalam rataan
 
-Uji ADF menghasilkan Dickey-Fuller = -3.6538, lag order = 4, dan p-value = 0.03238. Nilai ini lebih kecil dari taraf nyata 5% sehingga tolak $H_0$, artinya secara formal data sudah stasioner dalam rataan, tetapi hanya tipis di bawah 0.05. Hasil ini agak berbeda dengan eksplorasi plot deret waktu yang menunjukkan pergeseran nilai tengah. Karena hasilnya borderline, pada analisis ini tetap dilakukan differencing agar sesuai alur pada data kurs (lihat catatan di bagian akhir).
+Uji ADF menghasilkan Dickey-Fuller = -3.6538, lag order = 4, dan p-value = 0.03238. Nilai ini lebih kecil dari taraf nyata 5% sehingga tolak $H_0$, artinya secara formal data sudah stasioner dalam rataan, tetapi hanya tipis di bawah 0.05. Hasil ini agak berbeda dengan eksplorasi plot deret waktu yang menunjukkan pergeseran nilai tengah. Karena hasilnya borderline, pada analisis ini tetap dilakukan differencing agar sesuai alur pada data kurs.
 
 ### Plot Box-Cox
 ```{r}
@@ -203,7 +202,7 @@ Setelah differencing pertama, data bergerak di sekitar nilai tengah nol tanpa tr
 acf(train.diff)
 ```
 
-Plot ACF data hasil differencing hanya memiliki satu spike di lag 1 (sekitar -0.22, sedikit melewati batas), sedangkan lag berikutnya berada di dalam batas. ACF *cuts off* setelah lag 1 sehingga data sudah stasioner dalam rataan.
+Plot ACF data hasil differencing hanya memiliki satu spike di lag 1 (sekitar -0.22,  ngelewatin batas sedikit), sedangkan lag berikutnya berada di dalam batas. ACF *cuts off* setelah lag 1 sehingga data sudah stasioner dalam rataan.
 
 ### Uji ADF
 ```{r}
